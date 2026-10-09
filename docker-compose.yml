@@ -1,0 +1,46 @@
+# CyberRange · Docker 部署编排（供装有 Docker 的环境使用）
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cyberrange
+      POSTGRES_PASSWORD: cyberrange
+      POSTGRES_DB: cyberrange
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql+psycopg://cyberrange:cyberrange@db:5432/cyberrange
+      SECRET_KEY: cyberrange-dev-secret-key-please-change-in-production-0001
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:

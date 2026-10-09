@@ -1,0 +1,10 @@
+# Python 3.14 兼容版本约束（>= 解析到支持 3.14 的最新稳定版）
+fastapi>=0.115
+uvicorn[standard]>=0.32
+sqlalchemy>=2.0.43
+pydantic>=2.12
+pydantic-settings>=2.6
+PyJWT>=2.10
+bcrypt>=4.2
+python-multipart>=0.0.20
+email-validator>=2.2
