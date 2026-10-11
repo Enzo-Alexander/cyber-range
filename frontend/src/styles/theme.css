@@ -48,12 +48,13 @@ a {
   border-bottom: 1px solid var(--line);
 }
 .topbar .in {
-  max-width: 1100px;
+  max-width: 1450px;
   margin: 0 auto;
   padding: 12px 24px;
   display: flex;
   align-items: center;
   gap: 18px;
+  justify-content: space-between;
 }
 .brand {
   display: flex;
@@ -161,8 +162,15 @@ a {
 }
 
 /* 布局 */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 .container {
-  max-width: 1100px;
+  flex: 1;
+  max-width: 1250px;
+  width: 100%;
   margin: 0 auto;
   padding: 28px 24px;
 }
@@ -296,7 +304,6 @@ a {
   color: var(--muted);
   margin-top: 4px;
 }
-
 .form-card h2 {
   color: #eaf4ff;
   margin-bottom: 18px;

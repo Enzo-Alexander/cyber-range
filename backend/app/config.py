@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     secret_key: str = "cyberrange-dev-secret-key-please-change-in-production-0001"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24  # 1 天
+    access_token_expire_minutes: int = 60 * 24 * 30  # 30 天
 
     # 本地默认 SQLite，零配置可跑；生产切 PostgreSQL
     database_url: str = "sqlite:///./cyberrange.db"

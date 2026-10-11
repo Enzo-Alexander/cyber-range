@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import auth, users
+from .routers import auth, challenges, users
 from .seed import init_db
 
 app = FastAPI(title=settings.app_name)
@@ -24,6 +24,8 @@ def startup() -> None:
 
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
+app.include_router(challenges.router, prefix=settings.api_prefix)
+app.include_router(challenges.admin_router, prefix=settings.api_prefix)
 
 
 @app.get("/health", tags=["system"])

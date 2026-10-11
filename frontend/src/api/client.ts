@@ -1,10 +1,12 @@
-const API = '/api'
+const API = (import.meta.env.VITE_API_BASE as string | undefined) || '/api'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('cr_token')
   const headers = new Headers(options.headers)
-  headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
 
   const res = await fetch(`${API}${path}`, { ...options, headers })
 
@@ -25,4 +27,10 @@ export const http = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  postForm: <T>(path: string, body: FormData) =>
+    request<T>(path, { method: 'POST', body }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (path: string) =>
+    request<void>(path, { method: 'DELETE' }),
 }

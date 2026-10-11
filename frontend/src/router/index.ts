@@ -11,6 +11,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'home', component: () => import('../views/HomeView.vue') },
         { path: 'challenges', name: 'challenges', component: () => import('../views/ChallengesView.vue') },
+        { path: 'challenge/:id', name: 'challenge', component: () => import('../views/ChallengeDetailView.vue') },
         { path: 'traffic', name: 'traffic', component: () => import('../views/TrafficView.vue') },
         { path: 'leaderboard', name: 'leaderboard', component: () => import('../views/LeaderboardView.vue') },
         { path: 'announcements', name: 'announcements', component: () => import('../views/AnnouncementView.vue') },
@@ -30,6 +31,9 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login' }
+  }
+  if (to.name === 'admin' && (!auth.isAuthenticated || auth.user?.role !== 'admin')) {
+    return { name: 'home' }
   }
 })
 

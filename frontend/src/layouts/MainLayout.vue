@@ -28,22 +28,23 @@
     </header>
 
     <main class="container">
-      <router-view />
+      <router-view :key="route.fullPath" />
     </main>
 
     <footer class="status-bar">
       <span>mode: <span class="ok">online</span></span>
-      <span>CYBERRANGE · phase 0 scaffold</span>
-      <span class="warn">⚠ design preview</span>
+      <span>CYBERRANGE · phase 1 · challenge & score</span>
+      <span class="warn">⚡ red-alert ready</span>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 function onLogout() {

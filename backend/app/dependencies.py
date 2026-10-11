@@ -10,6 +10,7 @@ from .models import User
 from .security import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def _cred_exc() -> HTTPException:
@@ -36,6 +37,26 @@ def get_current_user(
     user = db.query(User).filter(User.username == username).first()
     if user is None or not user.is_active:
         raise _cred_exc()
+    return user
+
+
+def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """未登录时返回 None，登录时返回当前用户（用于可浏览但需个性化标记的接口）。"""
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+    except Exception:
+        return None
+    username = payload.get("sub")
+    if not username:
+        return None
+    user = db.query(User).filter(User.username == username).first()
+    if user is None or not user.is_active:
+        return None
     return user
 
 
