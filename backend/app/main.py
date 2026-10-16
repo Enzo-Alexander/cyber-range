@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routers import articles, auth, challenges, parse_doc, users
+from .routers import articles, auth, challenges, parse_doc, traffic, users
 from .seed import init_db
 
 app = FastAPI(title=settings.app_name)
@@ -37,6 +37,7 @@ app.include_router(challenges.admin_router, prefix=settings.api_prefix)
 app.include_router(articles.router, prefix=settings.api_prefix)
 app.include_router(articles.admin_router, prefix=settings.api_prefix)
 app.include_router(parse_doc.router, prefix=settings.api_prefix)
+app.include_router(traffic.router, prefix=settings.api_prefix)
 
 
 @app.get("/health", tags=["system"])
