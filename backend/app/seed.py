@@ -1,4 +1,6 @@
 """初始化：建表 + 创建默认管理员 + 种子题目。"""
+from sqlalchemy import inspect, text
+
 from .database import Base, SessionLocal, engine
 from .models import Challenge, User
 from .security import hash_password
@@ -110,8 +112,29 @@ SEED_CHALLENGES: list[dict] = [
 ]
 
 
+def _ensure_columns() -> None:
+    """轻量迁移：给已存在的表补上后加的列（本项目没有引入 Alembic）。"""
+    wanted: dict[str, dict[str, str]] = {
+        "competition_challenges": {
+            "points": "INTEGER NOT NULL DEFAULT 100",
+            "solved_count": "INTEGER NOT NULL DEFAULT 0",
+        },
+    }
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    with engine.begin() as conn:
+        for table, columns in wanted.items():
+            if table not in tables:
+                continue
+            existing = {col["name"] for col in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+
+
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
 
     db = SessionLocal()
     try:

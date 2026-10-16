@@ -159,6 +159,143 @@
           </table>
         </section>
 
+        <!-- 比赛管理 -->
+        <section v-else-if="section === 'competitions'" class="panel">
+          <div class="panel-head">
+            <div class="panel-t">比赛管理</div>
+          </div>
+
+          <!-- 新建比赛 -->
+          <div class="art-form">
+            <div class="row2" style="grid-template-columns: 2fr 1fr 1fr">
+              <label>比赛名称
+                <input v-model="compForm.name" placeholder="如：长城杯" />
+              </label>
+              <label>图标
+                <input v-model="compForm.icon" placeholder="🏆" />
+              </label>
+              <label>
+                <span>&nbsp;</span>
+                <button class="btn primary" :disabled="!compForm.name.trim()" @click="createComp">新建比赛</button>
+              </label>
+            </div>
+            <label>描述
+              <input v-model="compForm.description" placeholder="比赛简介" />
+            </label>
+          </div>
+
+          <!-- 比赛列表 -->
+          <table class="tbl" style="margin-top: 18px">
+            <thead><tr><th>比赛</th><th>届次数</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="c in compList" :key="c.id">
+                <td class="t">{{ c.icon }} {{ c.name }}</td>
+                <td class="au">{{ editionCount[c.id] || 0 }} 届</td>
+                <td class="ops">
+                  <button class="op" @click="selectComp(c)">管理届次</button>
+                  <button class="op" @click="editComp(c)">编辑简介</button>
+                  <button class="op danger" @click="askDeleteComp(c)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- 选中比赛后：届次管理 -->
+          <div v-if="selectedComp" style="margin-top: 24px">
+            <div class="panel-t" style="margin-bottom:12px">{{ selectedComp.icon }} {{ selectedComp.name }} — 届次管理</div>
+            <div class="art-form">
+              <div class="row2" style="grid-template-columns: 2fr 1fr 1fr">
+                <label>届次名称
+                  <input v-model="editionForm.name" placeholder="如：2024 第一届" />
+                </label>
+                <label>年份
+                  <input v-model.number="editionForm.year" type="number" placeholder="2024" />
+                </label>
+                <label>
+                  <span>&nbsp;</span>
+                  <button class="btn primary" :disabled="!editionForm.name.trim()" @click="createEdition">新建届次</button>
+                </label>
+              </div>
+            </div>
+            <table class="tbl" style="margin-top: 14px">
+              <thead><tr><th>届次</th><th>年份</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="e in editionList" :key="e.id">
+                  <td class="t">{{ e.name }}</td>
+                  <td class="au">{{ e.year }}</td>
+                  <td class="ops">
+                    <button class="op" @click="selectEdition(e)">管理题目</button>
+                    <button class="op danger" @click="askDeleteEdition(e)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- 选中届次后：题目管理 -->
+            <div v-if="selectedEdition" style="margin-top: 24px">
+              <div class="panel-t" style="margin-bottom:12px">{{ selectedComp.icon }} {{ selectedComp.name }} · {{ selectedEdition.name }} — 题目管理</div>
+              <div class="art-form">
+                <div class="row2" style="grid-template-columns: 2fr 1fr 1fr 1fr">
+                  <label>题目名称
+                    <input v-model="chForm.title" placeholder="题目名称" />
+                  </label>
+                  <label>分类
+                    <select v-model="chForm.category">
+                      <option>Web</option><option>逆向</option><option>Pwn</option><option>Crypto</option><option>Misc</option>
+                    </select>
+                  </label>
+                  <label>难度
+                    <select v-model.number="chForm.difficulty">
+                      <option :value="1">1星</option><option :value="2">2星</option><option :value="3">3星</option><option :value="4">4星</option><option :value="5">5星</option>
+                    </select>
+                  </label>
+                  <label>分数
+                    <input v-model.number="chForm.points" type="number" min="0" max="100000" placeholder="100" />
+                  </label>
+                </div>
+                <label>题目描述
+                  <textarea v-model="chForm.description" rows="3" placeholder="题目描述" />
+                </label>
+                <label>Flag
+                  <input v-model="chForm.flag" placeholder="flag{...}" />
+                </label>
+                <label>附件
+                  <label class="upload-box" style="margin-bottom:0">
+                    <input type="file" class="hidden-file" @change="onCompFile" />
+                    <template v-if="chForm.attachment">
+                      <span class="up-icon">📄</span>
+                      <span class="up-name">{{ chForm.attachment }}</span>
+                      <span class="up-remove" @click.stop="chForm.attachment = ''">✕ 移除</span>
+                    </template>
+                    <template v-else>
+                      <span class="up-icon">⬆</span>
+                      <span class="up-text">点击选择附件</span>
+                    </template>
+                  </label>
+                </label>
+                <div class="art-ops">
+                  <button class="btn primary" :disabled="!chForm.title.trim()" @click="createCompChallenge">添加题目</button>
+                </div>
+              </div>
+              <table class="tbl" style="margin-top: 14px">
+                <thead><tr><th>题目</th><th>分类</th><th>难度</th><th>分数</th><th>已解</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr v-for="ch in compChallenges" :key="ch.id">
+                    <td class="t">{{ ch.title }}</td>
+                    <td class="au">{{ ch.category }}</td>
+                    <td class="au">{{ '★'.repeat(ch.difficulty) }}</td>
+                    <td class="au">{{ ch.points }}</td>
+                    <td class="au">{{ ch.solved_count }}</td>
+                    <td class="ops">
+                      <button class="op danger" @click="removeChallenge(ch)">删除</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <section v-else class="panel">
           <div class="panel-t">{{ menus.find((m) => m.id === section)?.label }}</div>
           <p class="ph">该模块将在后续阶段开放。</p>
@@ -228,6 +365,46 @@
         </div>
       </div>
     </div>
+
+    <!-- 编辑比赛弹窗 -->
+    <div v-if="editCompModal" class="overlay" @click.self="editCompModal = false">
+      <div class="dialog" style="width:480px">
+        <div class="d-head">编辑比赛</div>
+        <div class="form">
+          <label>比赛名称
+            <input v-model="editCompForm.name" />
+          </label>
+          <label>图标
+            <input v-model="editCompForm.icon" />
+          </label>
+          <label>简介
+            <textarea v-model="editCompForm.description" rows="3" />
+          </label>
+        </div>
+        <div class="d-ops">
+          <button class="btn ghost" @click="editCompModal = false">取消</button>
+          <button class="btn primary" :disabled="!editCompForm.name.trim()" @click="saveComp">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div v-if="deleteModal" class="overlay" @click.self="deleteModal = false">
+      <div class="dialog" style="width:440px">
+        <div class="d-head" style="color:var(--red)">⚠ 确认删除</div>
+        <p style="color:var(--text);font-size:14px;line-height:1.7;margin:12px 0">
+          {{ deleteWarning }}
+        </p>
+        <label v-if="deleteNeedPassword" style="font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:5px">
+          请输入管理员密码确认
+          <input v-model="deletePassword" type="password" placeholder="管理员密码" @keyup.enter="confirmDelete" />
+        </label>
+        <div class="d-ops">
+          <button class="btn ghost" @click="deleteModal = false">取消</button>
+          <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff" :disabled="deleteNeedPassword && !deletePassword" @click="confirmDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -235,12 +412,14 @@
 import { onMounted, reactive, ref } from 'vue'
 import { CATEGORIES, challengesApi, type AdminStats, type Challenge } from '../api/challenges'
 import { articlesApi, type Article } from '../api/articles'
+import { competitionsApi, type Competition, type CompetitionEdition, type CompetitionChallenge } from '../api/competitions'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const section = ref('challenges')
 const menus = [
   { id: 'challenges', label: '题目管理' },
+  { id: 'competitions', label: '比赛管理' },
   { id: 'review', label: '题目审核' },
   { id: 'users', label: '用户管理' },
   { id: 'notice', label: '公告管理' },
@@ -276,6 +455,18 @@ async function onFile(ev: Event) {
   try {
     const res = await challengesApi.uploadAttachment(file)
     form.attachment = res.filename
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+
+async function onCompFile(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const res = await challengesApi.uploadAttachment(file)
+    chForm.attachment = res.filename
   } catch (e) {
     alert((e as Error).message)
   }
@@ -344,7 +535,157 @@ async function toggle(ch: Challenge) {
   await load()
 }
 
-onMounted(() => { load(); loadArticles() })
+// ---------- 比赛管理 ----------
+const compList = ref<Competition[]>([])
+const selectedComp = ref<Competition | null>(null)
+const editionList = ref<CompetitionEdition[]>([])
+const selectedEdition = ref<CompetitionEdition | null>(null)
+const compChallenges = ref<CompetitionChallenge[]>([])
+const editionCount = ref<Record<number, number>>({})
+
+const compForm = reactive({ name: '', description: '', icon: '🏆' })
+const editionForm = reactive({ name: '', year: 2024 })
+const chForm = reactive({ title: '', category: 'Web', difficulty: 1, points: 100, description: '', flag: '', attachment: '' })
+
+// 编辑比赛
+const editCompModal = ref(false)
+const editCompId = ref(0)
+const editCompForm = reactive({ name: '', description: '', icon: '🏆' })
+
+function editComp(c: Competition) {
+  editCompId.value = c.id
+  editCompForm.name = c.name
+  editCompForm.description = c.description
+  editCompForm.icon = c.icon
+  editCompModal.value = true
+}
+
+async function saveComp() {
+  await competitionsApi.updateCompetition(editCompId.value, { ...editCompForm })
+  editCompModal.value = false
+  await loadComps()
+}
+
+// 删除确认
+const deleteModal = ref(false)
+const deletePassword = ref('')
+const deleteWarning = ref('')
+const deleteNeedPassword = ref(true)
+let deleteAction: (() => Promise<void>) | null = null
+
+function askDeleteComp(c: Competition) {
+  deleteWarning.value = `删除比赛「${c.name}」将同时删除其下所有届次及所有题目，此操作不可恢复！`
+  deletePassword.value = ''
+  deleteNeedPassword.value = true
+  deleteAction = async () => {
+    await competitionsApi.deleteCompetition(c.id, deletePassword.value)
+    selectedComp.value = null
+    selectedEdition.value = null
+    await loadComps()
+  }
+  deleteModal.value = true
+}
+
+function askDeleteEdition(e: CompetitionEdition) {
+  deleteWarning.value = `删除届次「${e.name}」将同时删除其下所有题目，此操作不可恢复！`
+  deletePassword.value = ''
+  deleteNeedPassword.value = true
+  deleteAction = async () => {
+    await competitionsApi.deleteEdition(e.id, deletePassword.value)
+    selectedEdition.value = null
+    compChallenges.value = []
+    if (selectedComp.value) {
+      editionList.value = await competitionsApi.editions(selectedComp.value.id)
+    }
+    await loadComps()
+  }
+  deleteModal.value = true
+}
+
+async function confirmDelete() {
+  if (!deleteAction) return
+  try {
+    await deleteAction()
+    deleteModal.value = false
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+
+async function removeChallenge(ch: CompetitionChallenge) {
+  if (!selectedEdition.value) return
+  deleteWarning.value = `确定删除题目「${ch.title}」吗？`
+  deletePassword.value = ''
+  deleteNeedPassword.value = false
+  deleteAction = async () => {
+    await competitionsApi.deleteChallenge(ch.id)
+    compChallenges.value = await competitionsApi.editionChallenges(selectedEdition.value!.id)
+  }
+  deleteModal.value = true
+}
+
+async function loadComps() {
+  compList.value = await competitionsApi.list()
+  const counts: Record<number, number> = {}
+  for (const c of compList.value) {
+    const eds = await competitionsApi.editions(c.id)
+    counts[c.id] = eds.length
+  }
+  editionCount.value = counts
+}
+
+async function createComp() {
+  await competitionsApi.createCompetition({ ...compForm })
+  compForm.name = ''; compForm.description = ''; compForm.icon = '🏆'
+  await loadComps()
+}
+
+async function selectComp(c: Competition) {
+  selectedComp.value = c
+  selectedEdition.value = null
+  compChallenges.value = []
+  editionList.value = await competitionsApi.editions(c.id)
+}
+
+async function createEdition() {
+  if (!selectedComp.value) return
+  await competitionsApi.createEdition({
+    competition_id: selectedComp.value.id,
+    name: editionForm.name,
+    year: editionForm.year,
+  })
+  editionForm.name = ''
+  editionList.value = await competitionsApi.editions(selectedComp.value.id)
+  await loadComps()
+}
+
+async function selectEdition(e: CompetitionEdition) {
+  selectedEdition.value = e
+  compChallenges.value = await competitionsApi.editionChallenges(e.id)
+}
+
+async function createCompChallenge() {
+  if (!selectedEdition.value) return
+  try {
+    await competitionsApi.createChallenge({
+      edition_id: selectedEdition.value.id,
+      title: chForm.title,
+      category: chForm.category,
+      difficulty: chForm.difficulty,
+      points: Number(chForm.points) || 0,
+      description: chForm.description,
+      flag: chForm.flag,
+      attachment: chForm.attachment || null,
+    })
+    chForm.title = ''; chForm.description = ''; chForm.flag = ''; chForm.attachment = ''
+    chForm.points = 100
+    compChallenges.value = await competitionsApi.editionChallenges(selectedEdition.value.id)
+  } catch (e) {
+    alert('创建失败: ' + (e as Error).message)
+  }
+}
+
+onMounted(() => { load(); loadArticles(); loadComps() })
 
 // ---------- 公告 / 文章 ----------
 const artList = ref<Article[]>([])
@@ -627,4 +968,17 @@ async function publishArticle() {
 .art-form input:focus, .art-form textarea:focus { border-color: var(--green); }
 .art-form textarea { resize: vertical; font-family: inherit; }
 .art-ops { display: flex; justify-content: flex-end; }
+.art-form select {
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 9px 12px;
+  background: rgba(9, 22, 30, 0.9);
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.art-form select:focus { border-color: var(--green); }
+.art-form select option { background: var(--panel); color: var(--text); }
 </style>

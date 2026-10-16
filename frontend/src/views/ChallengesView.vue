@@ -23,13 +23,81 @@
         v-for="c in CATEGORIES"
         :key="c"
         class="tab"
-        :class="{ active: active === c }"
+        :class="{ active: viewMode === 'lobby' && active === c }"
         @click="pick(c)"
       >{{ c }}</button>
+      <button
+        class="tab comp-tab"
+        :class="{ active: viewMode === 'competitions' }"
+        @click="viewMode = 'competitions'"
+      >🏆 比赛真题</button>
+    </div>
+
+    <!-- 比赛真题视图 -->
+    <div v-if="viewMode === 'competitions'" class="comp-view">
+      <!-- 比赛列表 -->
+      <div v-if="!selectedComp && !selectedEdition" class="ch-grid">
+        <div v-for="c in compList" :key="c.id" class="card comp-card" @click="selectedComp = c">
+          <div class="c-head" style="justify-content:center"><span class="c-icon">{{ c.icon }}</span></div>
+          <div class="c-title" style="text-align:center">{{ c.name }}</div>
+          <p class="c-desc" style="text-align:center">{{ c.description || '暂无描述' }}</p>
+        </div>
+      </div>
+
+      <!-- 届次列表 -->
+      <div v-else-if="!selectedEdition" class="edition-view">
+        <div class="back" @click="selectedComp = null">← 返回比赛列表</div>
+        <h2 class="edition-title">{{ selectedComp?.icon }} {{ selectedComp?.name }}</h2>
+        <div class="ch-grid">
+          <div v-for="e in editionList" :key="e.id" class="card comp-card" @click="selectedEdition = e">
+            <div class="c-head" style="justify-content:center"><span class="c-icon">📅</span></div>
+            <div class="c-title" style="text-align:center">{{ e.name }}</div>
+            <p class="c-desc" style="text-align:center">{{ e.year }} 年</p>
+            <p class="comp-earned" :class="{ scored: e.my_points > 0 }">
+              <span class="ce-label">已得分数：</span>
+              <b>{{ e.my_points }}</b>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 届次题目列表 -->
+      <div v-else class="edition-view">
+        <div class="back" @click="selectedEdition = null">← 返回届次列表</div>
+        <h2 class="edition-title">{{ selectedComp?.icon }} {{ selectedComp?.name }} · {{ selectedEdition?.name }}</h2>
+        <div class="ch-grid">
+          <router-link
+            v-for="ch in compChallenges"
+            :key="ch.id"
+            :to="`/comp-challenge/${ch.id}`"
+            class="card comp-card"
+            :class="{ 'comp-solved': ch.solved_by_me }"
+          >
+            <div class="c-head">
+              <span class="c-state" :class="{ done: ch.solved_by_me }">
+                {{ ch.solved_by_me ? '✓' : '' }}
+              </span>
+              <span class="c-pts">+{{ ch.points }}</span>
+            </div>
+            <div class="c-title-row">
+              <span v-if="ch.solved_by_me" class="solved-badge">✓ 已解</span>
+              <span class="c-title">{{ ch.title }}</span>
+            </div>
+            <span class="c-tag">{{ ch.category }}</span>
+            <div class="c-stars" :title="'难度 ' + ch.difficulty + ' 星'">
+              <i v-for="n in 5" :key="n" :class="['st', { on: n <= ch.difficulty }]">★</i>
+            </div>
+            <div class="c-foot">
+              <span class="c-cnt">{{ ch.solved_count }} 已解</span>
+              <span class="go">→</span>
+            </div>
+          </router-link>
+        </div>
+      </div>
     </div>
 
     <!-- 题目卡片网格 -->
-    <div class="ch-grid">
+    <div v-if="viewMode === 'lobby'" class="ch-grid">
       <router-link
         v-for="ch in pagedList"
         :key="ch.id"
@@ -64,7 +132,7 @@
     </div>
 
     <!-- 分页 -->
-    <div class="pager" v-if="!loading && list.length > 0">
+    <div class="pager" v-if="viewMode === 'lobby' && !loading && list.length > 0">
       <button class="pg" :disabled="page === 1" @click="page--">← 上一页</button>
       <span class="pg-info">第 {{ page }} / {{ totalPages }} 页 · 共 {{ total }} 题</span>
       <button class="pg" :disabled="page === totalPages" @click="page++">下一页 →</button>
@@ -76,6 +144,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { CATEGORIES, challengesApi, type ChallengeCard } from '../api/challenges'
+import { competitionsApi, type Competition, type CompetitionEdition, type CompetitionChallenge } from '../api/competitions'
 
 const route = useRoute()
 const list = ref<ChallengeCard[]>([])
@@ -84,6 +153,14 @@ const queryCat = typeof route.query.category === 'string' ? route.query.category
 const active = ref(CATEGORIES.includes(queryCat) ? queryCat : '全部')
 const search = ref('')
 const loading = ref(true)
+
+// 比赛真题视图
+const viewMode = ref<'lobby' | 'competitions'>('lobby')
+const compList = ref<Competition[]>([])
+const selectedComp = ref<Competition | null>(null)
+const editionList = ref<CompetitionEdition[]>([])
+const selectedEdition = ref<CompetitionEdition | null>(null)
+const compChallenges = ref<CompetitionChallenge[]>([])
 
 const PAGE_SIZE = 16
 const page = ref(1)
@@ -103,6 +180,7 @@ async function load() {
 
 function pick(c: string) {
   active.value = c
+  viewMode.value = 'lobby'
   load()
 }
 
@@ -112,7 +190,49 @@ function onSearch() {
   searchTimer = setTimeout(load, 250)
 }
 
-onMounted(load)
+async function loadCompetitions() {
+  compList.value = await competitionsApi.list()
+}
+
+watch(selectedComp, async (c) => {
+  if (c) {
+    editionList.value = await competitionsApi.editions(c.id)
+  } else {
+    editionList.value = []
+    selectedEdition.value = null
+  }
+})
+
+watch(selectedEdition, async (e) => {
+  if (e) {
+    compChallenges.value = await competitionsApi.editionChallenges(e.id)
+  } else {
+    compChallenges.value = []
+  }
+})
+
+/** 从比赛题目详情页返回时，按 URL 参数恢复到原来的比赛 / 届次 */
+async function restoreCompFromQuery() {
+  if (route.query.tab !== 'competitions') return
+  viewMode.value = 'competitions'
+  if (!compList.value.length) await loadCompetitions()
+  const target = compList.value.find((c) => c.id === Number(route.query.comp))
+  if (!target) return
+  selectedComp.value = target
+  const editions = await competitionsApi.editions(target.id)
+  editionList.value = editions
+  const edition = editions.find((e) => e.id === Number(route.query.edition))
+  if (edition) {
+    selectedEdition.value = edition
+    compChallenges.value = await competitionsApi.editionChallenges(edition.id)
+  }
+}
+
+onMounted(async () => {
+  load()
+  await loadCompetitions()
+  await restoreCompFromQuery()
+})
 </script>
 
 <style scoped>
@@ -264,8 +384,7 @@ onMounted(load)
   font-size: 17px;
   font-weight: 700;
   color: #eaf4ff;
-  line-height: 1.45;
-  flex: 1;
+  line-height: 1.3;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -321,5 +440,104 @@ onMounted(load)
   font-family: var(--mono);
   font-size: 13px;
   color: var(--muted);
+}
+
+/* 比赛真题视图 */
+.comp-tab { border-color: rgba(255, 193, 7, 0.4); color: var(--amber); }
+.comp-tab.active { background: rgba(255, 193, 7, 0.15); border-color: var(--amber); color: #ffd54f; }
+.comp-card { cursor: pointer; padding: 16px 16px 14px; min-height: 120px; }
+.comp-card:hover { border-color: var(--amber); box-shadow: 0 0 16px rgba(255, 193, 7, 0.1); }
+/* 比赛题目解出后用琥珀色标记（与比赛板块的黄色边框一致，而不是题库的绿色） */
+.comp-card.comp-solved {
+  border-color: rgba(245, 166, 35, 0.65);
+  background: linear-gradient(180deg, rgba(245, 166, 35, 0.09), var(--panel));
+  box-shadow: 0 0 14px rgba(245, 166, 35, 0.14);
+}
+.comp-card.comp-solved:hover {
+  border-color: var(--amber);
+  box-shadow: 0 0 18px rgba(245, 166, 35, 0.22);
+}
+.comp-card .c-state.done {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: #2a1a02;
+  box-shadow: 0 0 10px rgba(245, 166, 35, 0.8), 0 0 4px rgba(245, 166, 35, 0.6);
+}
+.comp-card .solved-badge {
+  color: #2a1a02;
+  background: var(--amber);
+  box-shadow: 0 0 10px rgba(245, 166, 35, 0.8);
+}
+.comp-card:hover .go { color: var(--amber); }
+/* 届次卡片：该届已得分数 */
+.comp-earned {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+.comp-earned .ce-label {
+  font-size: 12px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+.comp-earned b {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+/* 有得分时才点亮：琥珀色 + 呼吸光晕，和比赛板块的黄色调一致 */
+.comp-earned.scored b {
+  color: var(--amber);
+  animation: scorePulse 2.4s ease-in-out infinite;
+}
+@keyframes scorePulse {
+  0%,
+  100% {
+    text-shadow: 0 0 8px rgba(245, 166, 35, 0.35), 0 0 18px rgba(245, 166, 35, 0.15);
+  }
+  50% {
+    text-shadow: 0 0 16px rgba(245, 166, 35, 0.8), 0 0 34px rgba(245, 166, 35, 0.4);
+  }
+}
+.c-icon { font-size: 28px; }
+.c-desc {
+  font-size: 13px;
+  color: var(--muted);
+  /* 与上方比赛名称拉开距离（.card 的 gap 之外再加一段间距） */
+  margin-top: 16px;
+  line-height: 1.4;
+  /* 卡片尺寸固定不变：简介占据剩余空间，过长时在卡片内滚动，内容仍可完整查看 */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* 长串（无空格的英文/链接）也不会撑破卡片 */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
+}
+.c-desc::-webkit-scrollbar { width: 6px; }
+.c-desc::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
+.c-desc::-webkit-scrollbar-thumb:hover { background: var(--green); }
+.edition-view { display: flex; flex-direction: column; gap: 16px; }
+.back {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--cyan);
+  cursor: pointer;
+  width: fit-content;
+}
+.back:hover { color: var(--green); }
+.edition-title {
+  font-size: 22px;
+  color: #eaf4ff;
+  margin: 0;
 }
 </style>

@@ -148,3 +148,86 @@ class ArticleOut(BaseModel):
     type: str
     author: str
     created_at: datetime
+
+
+# ---------- 比赛 / 真题 ----------
+class CompetitionIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    description: str = ""
+    icon: str = "🏆"
+
+
+class CompetitionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    description: str
+    icon: str
+    created_at: datetime
+
+
+class CompetitionEditionIn(BaseModel):
+    competition_id: int
+    name: str = Field(min_length=1, max_length=100)
+    year: int = Field(ge=2000, le=2100)
+
+
+class CompetitionEditionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    competition_id: int
+    name: str
+    year: int
+    created_at: datetime
+    # 当前用户在该届比赛里已获得的分数
+    my_points: int = 0
+
+
+class CompetitionChallengeIn(BaseModel):
+    edition_id: int
+    title: str = Field(min_length=1, max_length=200)
+    category: str = "Web"
+    difficulty: int = Field(ge=1, le=5, default=1)
+    points: int = Field(ge=0, le=100000, default=100)
+    description: str = ""
+    flag: str = ""
+    attachment: str | None = None
+
+
+class CompetitionChallengeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    edition_id: int
+    title: str
+    category: str
+    difficulty: int
+    description: str
+    points: int = 100
+    solved_count: int = 0
+    solved_by_me: bool = False
+    attachment: str | None = None
+    created_at: datetime
+
+
+class CompetitionChallengeDetailOut(BaseModel):
+    """比赛题目详情：附带所属比赛与届次信息，供详情页展示。
+
+    刻意不含 flag 字段，避免把答案下发到浏览器（flag 由后端校验）。
+    """
+
+    id: int
+    edition_id: int
+    title: str
+    category: str
+    difficulty: int
+    description: str
+    attachment: str | None = None
+    created_at: datetime
+    points: int = 100
+    solved_count: int = 0
+    solved_by_me: bool = False
+    competition_id: int
+    competition_name: str
+    competition_icon: str
+    edition_name: str
+    edition_year: int
