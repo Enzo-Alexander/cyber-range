@@ -1,9 +1,12 @@
 """CyberRange 后端入口。"""
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routers import auth, challenges, users
+from .routers import articles, auth, challenges, parse_doc, users
 from .seed import init_db
 
 app = FastAPI(title=settings.app_name)
@@ -16,6 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 挂载 uploads 静态目录（文章图片等）
+_uploads_root = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(_uploads_root, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_root), name="uploads")
+
 
 @app.on_event("startup")
 def startup() -> None:
@@ -26,6 +34,9 @@ app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(challenges.router, prefix=settings.api_prefix)
 app.include_router(challenges.admin_router, prefix=settings.api_prefix)
+app.include_router(articles.router, prefix=settings.api_prefix)
+app.include_router(articles.admin_router, prefix=settings.api_prefix)
+app.include_router(parse_doc.router, prefix=settings.api_prefix)
 
 
 @app.get("/health", tags=["system"])

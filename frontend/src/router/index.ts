@@ -12,6 +12,7 @@ const router = createRouter({
         { path: '', name: 'home', component: () => import('../views/HomeView.vue') },
         { path: 'challenges', name: 'challenges', component: () => import('../views/ChallengesView.vue') },
         { path: 'challenge/:id', name: 'challenge', component: () => import('../views/ChallengeDetailView.vue') },
+        { path: 'article/:id', name: 'article', component: () => import('../views/ArticleDetailView.vue') },
         { path: 'traffic', name: 'traffic', component: () => import('../views/TrafficView.vue') },
         { path: 'leaderboard', name: 'leaderboard', component: () => import('../views/LeaderboardView.vue') },
         { path: 'announcements', name: 'announcements', component: () => import('../views/AnnouncementView.vue') },

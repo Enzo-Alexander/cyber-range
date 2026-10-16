@@ -130,3 +130,21 @@ class ProfileOut(BaseModel):
     rank: int
     progress: list[CategoryProgress]
     solves: list[ProfileSolve]
+
+
+# ---------- 文章 / 公告 ----------
+class ArticleIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(default="")
+    type: str = Field(default="article", pattern="^(article|announcement)$")
+
+
+class ArticleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    content: str
+    type: str
+    author: str
+    created_at: datetime

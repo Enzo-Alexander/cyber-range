@@ -79,6 +79,86 @@
           </table>
         </section>
 
+        <!-- 公告管理 -->
+        <section v-else-if="section === 'notice'" class="panel">
+          <div class="panel-head">
+            <div class="panel-t">公告管理</div>
+          </div>
+          <div class="art-form">
+            <label>标题
+              <input v-model="noticeForm.title" placeholder="公告标题" />
+            </label>
+            <label>内容
+              <textarea v-model="noticeForm.content" rows="5" placeholder="公告内容" />
+            </label>
+            <label class="upload-box" style="margin-bottom:0">
+              <input type="file" class="hidden-file" accept=".docx,.pdf" @change="onDocUpload($event, noticeForm)" />
+              <span class="up-icon">📄</span>
+              <span class="up-text">上传 Word / PDF 文档自动提取内容</span>
+            </label>
+            <div class="art-ops">
+              <button class="btn primary" :disabled="artSaving || !noticeForm.title.trim()" @click="publishNotice">
+                {{ artSaving ? '发布中…' : '发布公告' }}
+              </button>
+            </div>
+          </div>
+          <table class="tbl" style="margin-top: 18px">
+            <thead>
+              <tr><th>标题</th><th>作者</th><th>发布时间</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="a in noticeList" :key="a.id">
+                <td class="t">{{ a.title }}</td>
+                <td class="au">{{ a.author }}</td>
+                <td class="au">{{ formatDate(a.created_at) }}</td>
+              </tr>
+              <tr v-if="!artLoading && noticeList.length === 0">
+                <td colspan="3" class="empty">还没有发布过公告</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- 文章管理 -->
+        <section v-else-if="section === 'articles'" class="panel">
+          <div class="panel-head">
+            <div class="panel-t">文章管理</div>
+          </div>
+          <div class="art-form">
+            <label>标题
+              <input v-model="articleForm.title" placeholder="文章标题" />
+            </label>
+            <label>内容
+              <textarea v-model="articleForm.content" rows="5" placeholder="文章内容" />
+            </label>
+            <label class="upload-box" style="margin-bottom:0">
+              <input type="file" class="hidden-file" accept=".docx,.pdf" @change="onDocUpload($event, articleForm)" />
+              <span class="up-icon">📄</span>
+              <span class="up-text">上传 Word / PDF 文档自动提取内容</span>
+            </label>
+            <div class="art-ops">
+              <button class="btn primary" :disabled="artSaving || !articleForm.title.trim()" @click="publishArticle">
+                {{ artSaving ? '发布中…' : '发布文章' }}
+              </button>
+            </div>
+          </div>
+          <table class="tbl" style="margin-top: 18px">
+            <thead>
+              <tr><th>标题</th><th>作者</th><th>发布时间</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="a in articleList" :key="a.id">
+                <td class="t">{{ a.title }}</td>
+                <td class="au">{{ a.author }}</td>
+                <td class="au">{{ formatDate(a.created_at) }}</td>
+              </tr>
+              <tr v-if="!artLoading && articleList.length === 0">
+                <td colspan="3" class="empty">还没有发布过文章</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
         <section v-else class="panel">
           <div class="panel-t">{{ menus.find((m) => m.id === section)?.label }}</div>
           <p class="ph">该模块将在后续阶段开放。</p>
@@ -154,6 +234,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { CATEGORIES, challengesApi, type AdminStats, type Challenge } from '../api/challenges'
+import { articlesApi, type Article } from '../api/articles'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -163,6 +244,7 @@ const menus = [
   { id: 'review', label: '题目审核' },
   { id: 'users', label: '用户管理' },
   { id: 'notice', label: '公告管理' },
+  { id: 'articles', label: '文章管理' },
   { id: 'site', label: '站点配置' },
   { id: 'logs', label: '日志审计' },
 ]
@@ -262,7 +344,82 @@ async function toggle(ch: Challenge) {
   await load()
 }
 
-onMounted(load)
+onMounted(() => { load(); loadArticles() })
+
+// ---------- 公告 / 文章 ----------
+const artList = ref<Article[]>([])
+const artLoading = ref(true)
+const artSaving = ref(false)
+const noticeForm = reactive({ title: '', content: '' })
+const articleForm = reactive({ title: '', content: '' })
+
+const noticeList = ref<Article[]>([])
+const articleList = ref<Article[]>([])
+
+function formatDate(s: string) {
+  const d = new Date(s)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+async function loadArticles() {
+  artLoading.value = true
+  try {
+    artList.value = await articlesApi.list()
+    noticeList.value = artList.value.filter((a) => a.type === 'announcement')
+    articleList.value = artList.value.filter((a) => a.type === 'article')
+  } catch {
+    artList.value = []
+    noticeList.value = []
+    articleList.value = []
+  } finally {
+    artLoading.value = false
+  }
+}
+
+async function publishNotice() {
+  artSaving.value = true
+  try {
+    await articlesApi.create({ title: noticeForm.title.trim(), content: noticeForm.content, type: 'announcement' })
+    noticeForm.title = ''
+    noticeForm.content = ''
+    await loadArticles()
+  } catch (e) {
+    alert((e as Error).message)
+  } finally {
+    artSaving.value = false
+  }
+}
+
+async function onDocUpload(ev: Event, form: { title: string; content: string }) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  artSaving.value = true
+  try {
+    const res = await articlesApi.parseDoc(file)
+    form.title = res.suggested_title
+    form.content = res.content
+  } catch (e) {
+    alert('文档解析失败: ' + (e as Error).message)
+  } finally {
+    artSaving.value = false
+    input.value = ''
+  }
+}
+
+async function publishArticle() {
+  artSaving.value = true
+  try {
+    await articlesApi.create({ title: articleForm.title.trim(), content: articleForm.content, type: 'article' })
+    articleForm.title = ''
+    articleForm.content = ''
+    await loadArticles()
+  } catch (e) {
+    alert((e as Error).message)
+  } finally {
+    artSaving.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -454,4 +611,20 @@ onMounted(load)
 .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .d-ops { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .btn.ghost { background: transparent; border: 1px solid var(--line2); color: var(--muted); }
+
+.art-form { display: flex; flex-direction: column; gap: 12px; }
+.art-form label { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+.art-form input, .art-form textarea {
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 9px 12px;
+  background: rgba(9, 22, 30, 0.9);
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+}
+.art-form input:focus, .art-form textarea:focus { border-color: var(--green); }
+.art-form textarea { resize: vertical; font-family: inherit; }
+.art-ops { display: flex; justify-content: flex-end; }
 </style>

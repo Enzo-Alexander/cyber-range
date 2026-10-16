@@ -23,6 +23,10 @@
   padding: 0;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   background:
     radial-gradient(1200px 600px at 20% -10%, #13222f 0%, #0a0e14 55%),

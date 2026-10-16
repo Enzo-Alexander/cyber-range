@@ -66,3 +66,16 @@ class SolveRecord(Base):
 
     user: Mapped["User"] = relationship(back_populates="solves")
     challenge: Mapped["Challenge"] = relationship(back_populates="solves")
+
+
+class Article(Base):
+    """公告 / 文章。"""
+
+    __tablename__ = "articles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(200), index=True, nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    type: Mapped[str] = mapped_column(String(20), default="article", index=True, nullable=False)  # article / announcement
+    author: Mapped[str] = mapped_column(String(50), default="admin", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

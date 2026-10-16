@@ -73,12 +73,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { CATEGORIES, challengesApi, type ChallengeCard } from '../api/challenges'
 
+const route = useRoute()
 const list = ref<ChallengeCard[]>([])
 const total = ref(0)
-const active = ref('全部')
+const queryCat = typeof route.query.category === 'string' ? route.query.category : ''
+const active = ref(CATEGORIES.includes(queryCat) ? queryCat : '全部')
 const search = ref('')
 const loading = ref(true)
 
