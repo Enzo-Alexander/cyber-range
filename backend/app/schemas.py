@@ -32,6 +32,15 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class AccountUpdateIn(BaseModel):
+    email: EmailStr
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6, max_length=128)
+
+
 # ---------- 题目 ----------
 class ChallengeIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
@@ -44,6 +53,18 @@ class ChallengeIn(BaseModel):
     status: str = Field(default="published", pattern="^(published|pending|draft)$")
 
 
+class ChallengeSubmitIn(BaseModel):
+    """普通用户提交题目：状态由服务端固定为待审核。"""
+
+    title: str = Field(min_length=1, max_length=200)
+    category: str = Field(min_length=1, max_length=50)
+    difficulty: int = Field(ge=1, le=5, default=1)
+    points: int = Field(ge=0, default=100)
+    description: str = ""
+    attachment: str | None = None
+    flag: str = Field(min_length=1, max_length=255)
+
+
 class ChallengeUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     category: str | None = Field(default=None, min_length=1, max_length=50)
@@ -52,7 +73,7 @@ class ChallengeUpdate(BaseModel):
     description: str | None = None
     attachment: str | None = None
     flag: str | None = Field(default=None, min_length=1, max_length=255)
-    status: str | None = Field(default=None, pattern="^(published|pending|draft)$")
+    status: str | None = Field(default=None, pattern="^(published|pending|draft|rejected)$")
 
 
 class ChallengeOut(BaseModel):
@@ -69,6 +90,13 @@ class ChallengeOut(BaseModel):
     status: str
     solved_count: int
     created_at: datetime
+    favorited_by_me: bool = False
+
+
+class AdminChallengeOut(ChallengeOut):
+    """管理员视图：包含 Flag，便于审核。"""
+
+    flag: str
 
 
 class ChallengeCard(BaseModel):
@@ -84,6 +112,14 @@ class ChallengeCard(BaseModel):
     status: str
     solved_count: int
     solved_by_me: bool = False
+
+
+class FavoriteChallengeOut(ChallengeCard):
+    favorited_at: datetime
+
+
+class FavoriteState(BaseModel):
+    favorited: bool
 
 
 class SolveIn(BaseModel):
@@ -123,10 +159,42 @@ class CategoryProgress(BaseModel):
     percent: int  # 0-100 掌握度
 
 
+class DailyActivity(BaseModel):
+    day: int
+    count: int
+
+
+class MonthlyActivityOut(BaseModel):
+    year: int
+    month: int
+    days: int
+    total: int
+    active_days: int
+    daily: list[DailyActivity]
+
+
+class YearlyMonthActivity(BaseModel):
+    month: int
+    days: int
+    total: int
+    daily: list[DailyActivity]
+
+
+class YearlyActivityOut(BaseModel):
+    year: int
+    total: int
+    active_days: int
+    months: list[YearlyMonthActivity]
+
+
 class ProfileOut(BaseModel):
     user: UserOut
     total_points: int
     total_solved: int
+    competition_solved: int = 0
+    level: int
+    level_progress: int
+    level_required: int
     rank: int
     progress: list[CategoryProgress]
     solves: list[ProfileSolve]
@@ -147,6 +215,20 @@ class ArticleOut(BaseModel):
     content: str
     type: str
     author: str
+    created_at: datetime
+
+
+# ---------- 通知 ----------
+class NotificationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    type: str
+    title: str
+    content: str
+    related_challenge_id: int | None
+    related_article_id: int | None
+    is_read: bool
     created_at: datetime
 
 

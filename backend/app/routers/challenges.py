@@ -1,5 +1,6 @@
 """题目 / 排行榜 / 管理接口。"""
 import os
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
@@ -9,11 +10,13 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..dependencies import get_current_user, get_current_user_optional, require_role
-from ..models import Challenge, SolveRecord, User
+from ..models import Challenge, Favorite, Notification, SolveRecord, User
 from ..schemas import (
+    AdminChallengeOut,
     ChallengeCard,
     ChallengeIn,
     ChallengeOut,
+    ChallengeSubmitIn,
     ChallengeUpdate,
     LeaderboardEntry,
     SolverOut,
@@ -40,6 +43,47 @@ def _card(ch: Challenge, solved_ids: set[int]) -> ChallengeCard:
         status=ch.status,
         solved_count=ch.solved_count,
         solved_by_me=ch.id in solved_ids,
+    )
+
+
+def _notify_admins(db: Session, submitter: User, challenge: Challenge) -> None:
+    admins = (
+        db.query(User)
+        .filter(User.role == "admin", User.is_active.is_(True))
+        .all()
+    )
+    for admin in admins:
+        db.add(
+            Notification(
+                user_id=admin.id,
+                type="challenge_submitted",
+                title="新的题目待审核",
+                content=f"{submitter.username} 提交了题目《{challenge.title}》，请前往题目审核。",
+                related_challenge_id=challenge.id,
+            )
+        )
+
+
+def _notify_submitter(db: Session, challenge: Challenge, approved: bool) -> None:
+    submitter = db.query(User).filter(User.username == challenge.author).first()
+    if submitter is None or submitter.role == "admin":
+        return
+    if approved:
+        title = "题目审核通过"
+        content = f"你提交的题目《{challenge.title}》已通过审核并上架。"
+        notice_type = "challenge_approved"
+    else:
+        title = "题目审核未通过"
+        content = f"你提交的题目《{challenge.title}》未通过审核。"
+        notice_type = "challenge_rejected"
+    db.add(
+        Notification(
+            user_id=submitter.id,
+            type=notice_type,
+            title=title,
+            content=content,
+            related_challenge_id=challenge.id,
+        )
     )
 
 
@@ -102,6 +146,47 @@ def leaderboard(db: Session = Depends(get_db)):
     return result
 
 
+@router.post("/submit", response_model=ChallengeOut, status_code=status.HTTP_201_CREATED)
+def submit_challenge(
+    body: ChallengeSubmitIn,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """普通用户提交题目，统一进入待审核状态。"""
+    if body.category not in CATEGORIES:
+        raise HTTPException(status_code=422, detail="题目分类无效")
+    ch = Challenge(
+        title=body.title,
+        category=body.category,
+        difficulty=body.difficulty,
+        points=body.points,
+        description=body.description,
+        attachment=body.attachment,
+        flag=body.flag,
+        author=current.username,
+        status="pending",
+    )
+    db.add(ch)
+    db.flush()
+    _notify_admins(db, current, ch)
+    db.commit()
+    db.refresh(ch)
+    return ch
+
+
+@router.post("/attachments")
+def upload_submission_attachment(
+    file: UploadFile = File(...),
+    current: User = Depends(get_current_user),
+):
+    ext = os.path.splitext(file.filename or "")[1] or ".bin"
+    name = f"{uuid4().hex}{ext}"
+    path = os.path.join(UPLOAD_DIR, name)
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+    return {"filename": name, "original": file.filename}
+
+
 @router.get("/{challenge_id}", response_model=ChallengeOut)
 def get_challenge(
     challenge_id: int,
@@ -111,7 +196,15 @@ def get_challenge(
     ch = db.get(Challenge, challenge_id)
     if ch is None or ch.status != "published":
         raise HTTPException(status_code=404, detail="题目不存在或未上架")
-    return ch
+    favorited = bool(
+        current
+        and db.query(Favorite.id)
+        .filter(Favorite.user_id == current.id, Favorite.challenge_id == ch.id)
+        .first()
+    )
+    return ChallengeOut.model_validate(ch).model_copy(
+        update={"favorited_by_me": favorited}
+    )
 
 
 @router.get("/{challenge_id}/attachment")
@@ -187,16 +280,35 @@ def submit_flag(
 
 
 # ---------- 管理员 ----------
-@admin_router.get("/challenges", response_model=list[ChallengeOut])
+@admin_router.get("/challenges", response_model=list[AdminChallengeOut])
 def admin_list_challenges(
+    challenge_status: Literal["published", "pending", "draft", "rejected"] | None = Query(
+        default=None, alias="status"
+    ),
     admin: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    return (
-        db.query(Challenge)
-        .order_by(Challenge.created_at.desc())
-        .all()
-    )
+    query = db.query(Challenge)
+    if challenge_status:
+        query = query.filter(Challenge.status == challenge_status)
+    return query.order_by(Challenge.created_at.desc()).all()
+
+
+@admin_router.get("/challenges/{challenge_id}/attachment")
+def admin_download_attachment(
+    challenge_id: int,
+    admin: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    ch = db.get(Challenge, challenge_id)
+    if ch is None:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    if not ch.attachment:
+        raise HTTPException(status_code=404, detail="该题目没有附件")
+    path = os.path.join(UPLOAD_DIR, ch.attachment)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="附件文件不存在")
+    return FileResponse(path, filename=ch.attachment)
 
 
 @admin_router.get("/stats")
@@ -213,7 +325,7 @@ def admin_stats(
     return {"challenge_total": total, "pending": pending, "today": today, "user_total": users}
 
 
-@admin_router.post("/challenges", response_model=ChallengeOut, status_code=status.HTTP_201_CREATED)
+@admin_router.post("/challenges", response_model=AdminChallengeOut, status_code=status.HTTP_201_CREATED)
 def admin_create_challenge(
     body: ChallengeIn,
     admin: User = Depends(require_role("admin")),
@@ -236,7 +348,7 @@ def admin_create_challenge(
     return ch
 
 
-@admin_router.put("/challenges/{challenge_id}", response_model=ChallengeOut)
+@admin_router.put("/challenges/{challenge_id}", response_model=AdminChallengeOut)
 def admin_update_challenge(
     challenge_id: int,
     body: ChallengeUpdate,
@@ -246,10 +358,23 @@ def admin_update_challenge(
     ch = db.get(Challenge, challenge_id)
     if ch is None:
         raise HTTPException(status_code=404, detail="题目不存在")
+    previous_status = ch.status
     for field in ("title", "category", "difficulty", "points", "description", "attachment", "flag", "status"):
         value = getattr(body, field)
         if value is not None:
             setattr(ch, field, value)
+    if previous_status != ch.status and ch.status in ("published", "rejected"):
+        _notify_submitter(db, ch, approved=ch.status == "published")
+    if previous_status == "pending" and ch.status != "pending":
+        (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == admin.id,
+                Notification.type == "challenge_submitted",
+                Notification.related_challenge_id == ch.id,
+            )
+            .update({Notification.is_read: True}, synchronize_session=False)
+        )
     db.commit()
     db.refresh(ch)
     return ch

@@ -17,7 +17,19 @@
         </div>
         <div class="title-row">
           <h1 class="title">{{ vm.title }}</h1>
-          <div v-if="vm.points !== null" class="pts">+{{ vm.points }}</div>
+          <div class="title-actions">
+            <button
+              v-if="canFavorite"
+              class="fav-btn"
+              :class="{ on: favorited }"
+              :disabled="favoriteBusy"
+              @click="emit('toggle-favorite')"
+            >
+              <span class="fav-star">{{ favorited ? '★' : '☆' }}</span>
+              {{ favoriteBusy ? '处理中…' : favorited ? '已收藏' : '收藏' }}
+            </button>
+            <div v-if="vm.points !== null" class="pts">+{{ vm.points }}</div>
+          </div>
         </div>
 
         <div class="glow">
@@ -146,9 +158,16 @@ const props = defineProps<{
   msgOk: boolean
   myRank: number
   solvers: { username: string }[]
+  canFavorite?: boolean
+  favorited?: boolean
+  favoriteBusy?: boolean
 }>()
 
-const emit = defineEmits<{ submit: []; 'update:flag': [string] }>()
+const emit = defineEmits<{
+  submit: []
+  'update:flag': [string]
+  'toggle-favorite': []
+}>()
 
 const shownSolvers = computed(() => props.solvers.slice(0, 5))
 
@@ -208,7 +227,7 @@ function renderMd(text: string): string {
 .tag {
   font-size: 13px;
   color: var(--cyan);
-  border: 1px solid rgba(0, 224, 255, 0.4);
+  border: 1px solid rgba(var(--cyan-rgb), 0.4);
   padding: 3px 12px;
   border-radius: 4px;
 }
@@ -219,7 +238,7 @@ function renderMd(text: string): string {
 }
 .status.ok { color: var(--green); border: 1px solid var(--green); }
 .status.wait { color: var(--amber); border: 1px solid var(--amber); }
-.status.comp { color: var(--cyan); border: 1px solid rgba(0, 224, 255, 0.5); }
+.status.comp { color: var(--cyan); border: 1px solid rgba(var(--cyan-rgb), 0.5); }
 .status.comp-ok { color: var(--amber); border: 1px solid var(--amber); }
 .title-row {
   display: flex;
@@ -228,12 +247,48 @@ function renderMd(text: string): string {
   gap: 16px;
   margin-bottom: 14px;
 }
-.title { font-size: 30px; font-weight: 800; color: #eaf4ff; }
+.title { font-size: 30px; font-weight: 800; color: var(--text-strong); }
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.fav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.fav-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.fav-btn.on {
+  border-color: rgba(var(--amber-rgb), 0.65);
+  background: rgba(var(--amber-rgb), 0.08);
+  color: var(--amber);
+}
+.fav-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.fav-star {
+  font-size: 16px;
+  line-height: 1;
+}
 .pts {
   font-size: 30px;
   font-weight: 800;
   color: var(--green);
-  text-shadow: 0 0 12px rgba(0, 255, 159, 0.5);
+  text-shadow: 0 0 12px rgba(var(--green-rgb), 0.5);
   white-space: nowrap;
 }
 .glow {
@@ -244,19 +299,19 @@ function renderMd(text: string): string {
 }
 @keyframes glowPulse {
   0%, 100% {
-    border-color: rgba(0, 255, 159, 0.45);
-    box-shadow: 0 0 8px rgba(0, 255, 159, 0.18), inset 0 0 12px rgba(0, 255, 159, 0.04);
+    border-color: rgba(var(--green-rgb), 0.45);
+    box-shadow: 0 0 8px rgba(var(--green-rgb), 0.18), inset 0 0 12px rgba(var(--green-rgb), 0.04);
   }
   50% {
     border-color: var(--green);
-    box-shadow: 0 0 24px rgba(0, 255, 159, 0.55), inset 0 0 18px rgba(0, 255, 159, 0.10);
+    box-shadow: 0 0 24px rgba(var(--green-rgb), 0.55), inset 0 0 18px rgba(var(--green-rgb), 0.10);
   }
 }
 .desc { color: var(--text); font-size: 16.5px; line-height: 2; }
 .desc p { margin-bottom: 12px; }
 .desc code {
   font-family: var(--mono);
-  background: rgba(0, 224, 255, 0.1);
+  background: rgba(var(--cyan-rgb), 0.1);
   color: var(--cyan);
   padding: 2px 6px;
   border-radius: 4px;
@@ -284,7 +339,7 @@ function renderMd(text: string): string {
   display: flex;
   justify-content: space-between;
   font-size: 15px;
-  color: #eaf4ff;
+  color: var(--text-strong);
   margin-bottom: 10px;
 }
 .flag-head .hint { font-size: 12px; color: var(--dim); }
@@ -297,7 +352,7 @@ function renderMd(text: string): string {
   font-family: var(--mono);
   font-size: 15px;
   padding: 12px 16px;
-  background: rgba(9, 22, 30, 0.9);
+  background: var(--field-bg);
   border: 1px solid var(--line2);
   border-radius: 6px;
   color: var(--text);
@@ -331,12 +386,12 @@ function renderMd(text: string): string {
   font-size: 30px;
   font-weight: 700;
   color: var(--green);
-  text-shadow: 0 0 10px rgba(0, 255, 159, 0.3);
+  text-shadow: 0 0 10px rgba(var(--green-rgb), 0.3);
 }
 .s-name {
   font-size: 16px;
   font-weight: 700;
-  color: #eaf4ff;
+  color: var(--text-strong);
   line-height: 1.4;
 }
 .s-sub {
@@ -362,10 +417,10 @@ function renderMd(text: string): string {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #06261a;
+  color: var(--on-accent);
   background: var(--green);
   font-size: 14px;
-  box-shadow: 0 0 10px rgba(0, 255, 159, 0.3);
+  box-shadow: 0 0 10px rgba(var(--green-rgb), 0.3);
 }
 .dim { color: var(--dim); font-size: 12px; }
 </style>

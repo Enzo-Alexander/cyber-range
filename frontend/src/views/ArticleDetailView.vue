@@ -13,41 +13,25 @@
           <span class="dim">{{ formatDate(article.created_at) }}</span>
         </div>
       </div>
-      <div class="art-content" v-html="renderedContent"></div>
+      <ArticleContent :content="article.content" />
     </div>
   </div>
   <div v-else class="loading">文章不存在</div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import ArticleContent from '../components/ArticleContent.vue'
 import { articlesApi, type Article } from '../api/articles'
+import { parseServerDate } from '../utils/datetime'
 
 const route = useRoute()
 const article = ref<Article | null>(null)
 const loading = ref(true)
 
-const renderedContent = computed(() => {
-  if (!article.value) return ''
-  let html = escapeHtml(article.value.content)
-  // 转换 markdown 图片 ![alt](url)
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-  // 转换标题
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>')
-  // 换行转 <br>
-  html = html.replace(/\n/g, '<br>')
-  return html
-})
-
-function escapeHtml(s: string) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
 function formatDate(s: string) {
-  const d = new Date(s)
+  const d = parseServerDate(s)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
@@ -76,7 +60,7 @@ onMounted(async () => {
   border-radius: 6px;
   transition: 0.15s;
 }
-.back:hover { color: var(--green); border-color: var(--green); background: rgba(0, 255, 159, 0.05); }
+.back:hover { color: var(--green); border-color: var(--green); background: rgba(var(--green-rgb), 0.05); }
 .art-card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -90,12 +74,12 @@ onMounted(async () => {
   padding: 2px 10px;
   border-radius: 4px;
 }
-.art-type.announcement { color: var(--red); border: 1px solid rgba(255, 59, 48, 0.5); }
-.art-type.article { color: var(--cyan); border: 1px solid rgba(0, 224, 255, 0.5); }
+.art-type.announcement { color: var(--red); border: 1px solid rgba(var(--red-rgb), 0.5); }
+.art-type.article { color: var(--cyan); border: 1px solid rgba(var(--cyan-rgb), 0.5); }
 .art-head h1 {
   margin: 12px 0 8px;
   font-size: 26px;
-  color: #eaf4ff;
+  color: var(--text-strong);
 }
 .art-meta {
   display: flex;
@@ -104,28 +88,5 @@ onMounted(async () => {
   color: var(--muted);
 }
 .art-meta .dim { color: var(--dim); }
-.art-content {
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--text);
-}
-.art-content :deep(img) {
-  max-width: 100%;
-  border-radius: 8px;
-  margin: 16px 0;
-  border: 1px solid var(--line);
-}
-.art-content :deep(h2) {
-  font-size: 18px;
-  color: #eaf4ff;
-  margin: 20px 0 10px;
-  padding-left: 10px;
-  border-left: 3px solid var(--green);
-}
-.art-content :deep(h3) {
-  font-size: 16px;
-  color: var(--cyan);
-  margin: 16px 0 8px;
-}
 .loading { text-align: center; color: var(--dim); padding: 60px; font-family: var(--mono); }
 </style>

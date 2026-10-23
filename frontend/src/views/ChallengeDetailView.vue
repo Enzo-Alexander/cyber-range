@@ -15,7 +15,11 @@
     :msg-ok="msgOk"
     :my-rank="myRank"
     :solvers="solvers"
+    :can-favorite="canFavorite"
+    :favorited="favorited"
+    :favorite-busy="favoriteBusy"
     @submit="submitFlag"
+    @toggle-favorite="toggleFavorite"
   />
 </template>
 
@@ -40,6 +44,11 @@ const msgOk = ref(false)
 const submitting = ref(false)
 const solved = ref(false)
 const myRank = ref(0)
+const favorited = ref(false)
+const favoriteBusy = ref(false)
+const canFavorite = computed(
+  () => auth.isAuthenticated && auth.user?.role !== 'admin',
+)
 
 const vm = computed(() => {
   const c = ch.value
@@ -64,11 +73,13 @@ async function load() {
   ch.value = null
   solvers.value = []
   solved.value = false
+  favorited.value = false
   myRank.value = 0
   flag.value = ''
   msg.value = ''
   try {
     ch.value = await challengesApi.get(id)
+    favorited.value = ch.value.favorited_by_me
     solvers.value = await challengesApi.solvers(id)
     // 当前用户是否已解
     if (auth.isAuthenticated) {
@@ -84,6 +95,24 @@ async function load() {
     // 交给布局组件展示「题目不存在或未上架」
   } finally {
     loading.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!auth.isAuthenticated) {
+    router.push({ name: 'login' })
+    return
+  }
+  if (!canFavorite.value || favoriteBusy.value) return
+  favoriteBusy.value = true
+  try {
+    const res = await challengesApi.toggleFavorite(Number(route.params.id))
+    favorited.value = res.favorited
+  } catch (e) {
+    msg.value = (e as Error).message
+    msgOk.value = false
+  } finally {
+    favoriteBusy.value = false
   }
 }
 

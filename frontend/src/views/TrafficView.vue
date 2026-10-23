@@ -512,8 +512,8 @@ onBeforeUnmount(() => {
 }
 .source-badge.upload {
   color: var(--cyan);
-  border-color: rgba(0, 224, 255, 0.5);
-  background: rgba(0, 224, 255, 0.08);
+  border-color: rgba(var(--cyan-rgb), 0.5);
+  background: rgba(var(--cyan-rgb), 0.08);
 }
 .dim {
   color: var(--dim);
@@ -556,7 +556,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  background: rgba(0, 255, 159, 0.1);
+  background: rgba(var(--green-rgb), 0.1);
   border: 1px solid var(--green);
   border-radius: 6px;
   color: var(--green);
@@ -565,16 +565,16 @@ onBeforeUnmount(() => {
   transition: 0.15s;
 }
 .upload-btn:hover {
-  background: rgba(0, 255, 159, 0.2);
-  box-shadow: 0 0 12px rgba(0, 255, 159, 0.2);
+  background: rgba(var(--green-rgb), 0.2);
+  box-shadow: 0 0 12px rgba(var(--green-rgb), 0.2);
 }
 .err {
   margin: 0;
   padding: 8px 12px;
   font-size: 13px;
-  color: #ffb4ac;
-  background: rgba(255, 60, 45, 0.12);
-  border: 1px solid rgba(255, 60, 45, 0.5);
+  color: var(--red);
+  background: rgba(var(--red-rgb), 0.12);
+  border: 1px solid rgba(var(--red-rgb), 0.5);
   border-radius: 6px;
 }
 
@@ -636,7 +636,7 @@ onBeforeUnmount(() => {
 .splitter:hover .grip,
 .splitter:focus-visible .grip {
   background: var(--green);
-  box-shadow: 0 0 10px rgba(0, 255, 159, 0.45);
+  box-shadow: 0 0 10px rgba(var(--green-rgb), 0.45);
 }
 .splitter:focus-visible {
   outline: none;
@@ -707,19 +707,19 @@ onBeforeUnmount(() => {
 .row.tcp { background: rgba(136, 116, 216, 0.1); }
 .row.udp { background: rgba(90, 160, 255, 0.09); }
 .row.dns { background: rgba(90, 160, 255, 0.14); }
-.row.http { background: rgba(0, 255, 159, 0.07); }
-.row:hover { background: rgba(0, 224, 255, 0.12); }
+.row.http { background: rgba(var(--green-rgb), 0.07); }
+.row:hover { background: rgba(var(--cyan-rgb), 0.12); }
 .row.selected {
-  background: rgba(0, 224, 255, 0.2);
+  background: rgba(var(--cyan-rgb), 0.2);
   border-left-color: var(--cyan);
 }
 .c-no { width: 56px; color: var(--dim); }
 .c-time { width: 92px; color: var(--muted); }
 .c-src, .c-dst { width: 150px; }
 .c-proto { width: 78px; font-weight: 700; }
-.row.tcp .c-proto { color: #b9a7ff; }
+.row.tcp .c-proto { color: var(--green); }
 .row.udp .c-proto { color: var(--amber); }
-.row.dns .c-proto { color: #7fc4ff; }
+.row.dns .c-proto { color: var(--cyan); }
 .row.http .c-proto { color: var(--green); }
 .c-len { width: 68px; color: var(--muted); }
 .c-info { color: var(--text); }
@@ -737,8 +737,8 @@ onBeforeUnmount(() => {
   cursor: pointer;
   border-radius: 3px;
 }
-.field-row:hover { background: rgba(0, 255, 159, 0.06); }
-.field-row.focused { background: rgba(0, 224, 255, 0.16); }
+.field-row:hover { background: rgba(var(--green-rgb), 0.06); }
+.field-row.focused { background: rgba(var(--cyan-rgb), 0.16); }
 .field-row .arrow {
   width: 12px;
   flex-shrink: 0;
@@ -768,8 +768,8 @@ onBeforeUnmount(() => {
 .hex-track .cell { text-align: center; border-radius: 2px; }
 .hex-track.ascii .cell { text-align: left; }
 .hex-track .cell.hl {
-  background: rgba(0, 224, 255, 0.32);
-  color: #eafcff;
+  background: rgba(var(--cyan-rgb), 0.32);
+  color: var(--text-strong);
 }
 
 .empty-hint {

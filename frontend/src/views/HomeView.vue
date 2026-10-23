@@ -3,26 +3,29 @@
     <div class="page-title">总览</div>
     <div class="page-sub">网络安全实战靶场与流量分析学习平台</div>
 
-    <div class="grid g4" style="margin-bottom: 24px">
+    <div class="grid g3" style="margin-bottom: 24px">
       <div class="card">
         <div class="t"><span style="color: var(--green)">◈</span>题目总数</div>
         <div class="stat-num">{{ totalCount }}</div>
         <p>多题型可练习</p>
       </div>
-      <div class="card">
+      <div class="card solved-card">
         <div class="t"><span style="color: var(--cyan)">◈</span>已解出</div>
-        <div class="stat-num">{{ auth.isAuthenticated ? solvedCount : '--' }}</div>
-        <p>个人进度</p>
+        <div class="solved-split">
+          <div>
+            <div class="stat-num">{{ auth.isAuthenticated ? solvedCount : '--' }}</div>
+            <p>题库已解出</p>
+          </div>
+          <div>
+            <div class="stat-num competition">{{ auth.isAuthenticated ? competitionSolved : '--' }}</div>
+            <p>比赛已解出</p>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="t"><span style="color: var(--amber)">◈</span>我的排名</div>
         <div class="stat-num">{{ auth.isAuthenticated ? '#' + myRank : '--' }}</div>
         <p>总榜</p>
-      </div>
-      <div class="card">
-        <div class="t"><span style="color: var(--red)">◈</span>签到</div>
-        <div class="stat-num">--</div>
-        <p>即将上线</p>
       </div>
     </div>
 
@@ -39,44 +42,81 @@
       </router-link>
     </div>
 
-    <div class="articles-panel">
-      <div class="panel-head">
-        <span class="ok">◈ 公告与文章</span>
-        <span class="dim">{{ articles.length }} 篇</span>
-      </div>
-      <div class="articles-list">
-        <div v-if="!loadingArticles && articles.length === 0" class="empty-art">
-          暂无文章，等待管理员发布
-        </div>
-        <div v-for="a in articles" :key="a.id" class="art-item">
-          <router-link :to="`/article/${a.id}`" class="art-row">
-            <span class="art-type" :class="a.type">{{ a.type === 'announcement' ? '公告' : '文章' }}</span>
-            <span class="art-title">{{ a.title }}</span>
-            <span class="art-meta">
-              <span>{{ a.author }}</span>
-              <span class="dim">{{ formatDate(a.created_at) }}</span>
-              <span class="arrow">›</span>
-            </span>
-          </router-link>
+    <div class="card year-activity">
+      <div class="year-head">
+        <div class="t"><span style="color: var(--green)">◈</span>全年做题活跃</div>
+        <div class="year-nav">
+          <button class="year-btn" title="上一年" @click="changeYear(-1)">‹</button>
+          <span class="year-label">{{ activityYear }} 年</span>
+          <button
+            class="year-btn"
+            title="下一年"
+            :disabled="!canGoNextYear"
+            @click="changeYear(1)"
+          >›</button>
         </div>
       </div>
+
+      <div v-if="auth.isAuthenticated" class="year-grid" :class="{ loading: activityLoading }">
+        <div v-for="month in monthBlocks" :key="month.month" class="month-block">
+          <div class="month-name">{{ month.month }} 月</div>
+          <div class="month-grid">
+            <div
+              v-for="(cell, index) in month.cells"
+              :key="index"
+              class="day-cell"
+              :class="[`level-${cell.level}`, { blank: !cell.day }]"
+              :title="cell.day ? `${activityYear}-${String(month.month).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}：${cell.count} 题` : ''"
+            ></div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="year-login">登录后查看年度做题记录</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { challengesApi } from '../api/challenges'
-import { articlesApi, type Article } from '../api/articles'
+import { computed, onMounted, ref } from 'vue'
+import { challengesApi, type YearlyActivity } from '../api/challenges'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 
 const totalCount = ref(0)
 const solvedCount = ref(0)
+const competitionSolved = ref(0)
 const myRank = ref<number | string>('-')
-const articles = ref<Article[]>([])
-const loadingArticles = ref(true)
+const today = new Date()
+const activityYear = ref(today.getFullYear())
+const activity = ref<YearlyActivity | null>(null)
+const activityLoading = ref(false)
+
+const monthBlocks = computed(() => {
+  const year = activityYear.value
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1
+    const source = activity.value?.months.find((item) => item.month === month)
+    const totalDays = source?.days ?? new Date(year, month, 0).getDate()
+    const counts = new Map(
+      (source?.daily ?? []).map((item) => [item.day, item.count]),
+    )
+    const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7
+    const cells: { day: number | null; count: number; level: number }[] = []
+
+    for (let leading = 0; leading < firstWeekday; leading++) {
+      cells.push({ day: null, count: 0, level: 0 })
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      const count = counts.get(day) ?? 0
+      const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : count <= 4 ? 3 : 4
+      cells.push({ day, count, level })
+    }
+    return { month, cells }
+  })
+})
+
+const canGoNextYear = computed(() => activityYear.value < today.getFullYear())
 
 const categories = [
   { name: '逆向工程', icon: '↩', desc: '分析二进制，还原程序逻辑' },
@@ -87,9 +127,24 @@ const categories = [
   { name: '数字取证', icon: '◆', desc: 'Misc / 隐写 / 取证' },
 ]
 
-function formatDate(s: string) {
-  const d = new Date(s)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+async function loadYearActivity() {
+  if (!auth.isAuthenticated) {
+    activity.value = null
+    return
+  }
+  activityLoading.value = true
+  try {
+    activity.value = await challengesApi.yearlyActivity(activityYear.value)
+  } catch {
+    activity.value = null
+  } finally {
+    activityLoading.value = false
+  }
+}
+
+function changeYear(delta: number) {
+  activityYear.value += delta
+  loadYearActivity()
 }
 
 onMounted(async () => {
@@ -104,90 +159,158 @@ onMounted(async () => {
     try {
       const p = await challengesApi.profile()
       solvedCount.value = p.total_solved
+      competitionSolved.value = p.competition_solved
       myRank.value = p.rank
     } catch {
       solvedCount.value = 0
+      competitionSolved.value = 0
     }
-  }
-
-  try {
-    articles.value = await articlesApi.list()
-  } catch {
-    articles.value = []
-  } finally {
-    loadingArticles.value = false
+    await loadYearActivity()
   }
 })
 </script>
 
 <style scoped>
-.articles-panel {
-  margin-top: 24px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(16, 24, 35, 0.5);
-  overflow: hidden;
-}
-.panel-head {
+.solved-card {
   display: flex;
+  flex-direction: column;
+}
+.solved-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.solved-split .stat-num {
+  line-height: 1.15;
+}
+.solved-split .stat-num.competition {
+  color: var(--amber);
+  text-shadow: 0 0 12px rgba(var(--amber-rgb), 0.28);
+}
+.year-activity {
+  margin-top: 16px;
+  padding: 22px 24px;
+}
+.year-head {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 13px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
-.panel-head .ok { color: var(--green); }
-.panel-head .dim { color: var(--dim); }
-.articles-list {
-  max-height: 320px;
-  overflow-y: auto;
-}
-.art-item {
-  border-bottom: 1px dashed var(--line);
-}
-.art-item:last-child { border-bottom: none; }
-.art-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  color: inherit;
-  text-decoration: none;
-  transition: 0.15s;
-}
-.art-row:hover { background: rgba(0, 255, 159, 0.04); }
-.art-type {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-.art-type.announcement { color: var(--red); border: 1px solid rgba(255, 59, 48, 0.5); }
-.art-type.article { color: var(--cyan); border: 1px solid rgba(0, 224, 255, 0.5); }
-.art-title {
-  flex: 1;
-  font-weight: 600;
-  color: #eaf4ff;
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.year-head .t {
+  margin-bottom: 0;
   white-space: nowrap;
 }
-.art-meta {
+.year-nav {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--muted);
-  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
 }
-.art-meta .dim { color: var(--dim); }
-.arrow { color: var(--dim); }
-.empty-art {
-  padding: 40px;
+.year-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.year-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+}
+.year-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.year-label {
+  min-width: 52px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
   text-align: center;
+  white-space: nowrap;
+}
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: 12px;
+  row-gap: 12px;
+  transition: opacity 0.15s ease;
+}
+.year-grid.loading {
+  opacity: 0.55;
+}
+.month-block {
+  min-width: 0;
+}
+.month-name {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.day-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--heat-0);
+  transition: transform 0.12s ease;
+}
+.day-cell.blank {
+  background: transparent;
+}
+.day-cell.level-1 { background: var(--heat-1); }
+.day-cell.level-2 { background: var(--heat-2); }
+.day-cell.level-3 { background: var(--heat-3); }
+.day-cell.level-4 { background: var(--heat-4); }
+.day-cell:not(.blank):hover {
+  position: relative;
+  z-index: 1;
+  outline: 1px solid var(--text-strong);
+  outline-offset: 1px;
+  transform: scale(1.2);
+}
+.year-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 108px;
   color: var(--dim);
-  font-size: 14px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .year-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    column-gap: 12px;
+    row-gap: 16px;
+  }
+}
+@media (max-width: 680px) {
+  .year-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 14px;
+    row-gap: 18px;
+  }
+  .year-head {
+    align-items: flex-start;
+  }
+}
+@media (max-width: 460px) {
+  .year-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 </style>

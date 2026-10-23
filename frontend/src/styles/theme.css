@@ -1,5 +1,6 @@
 /* ===== CyberRange 暗黑终端主题 ===== */
 :root {
+  color-scheme: dark;
   --bg: #0a0e14;
   --bg2: #0e141d;
   --panel: #101823;
@@ -7,14 +8,81 @@
   --line: #1e2b3b;
   --line2: #26364a;
   --green: #00ff9f;
+  --green-rgb: 0, 255, 159;
   --cyan: #00e0ff;
+  --cyan-rgb: 0, 224, 255;
   --red: #ff3b30;
+  --red-rgb: 255, 59, 48;
   --amber: #f5a623;
+  --amber-rgb: 245, 166, 35;
   --text: #d7e3ee;
+  --text-strong: #eaf4ff;
   --muted: #7e94a8;
   --dim: #5a6e80;
+  --on-accent: #06261a;
+  --on-amber: #2a1a02;
+  --body-bg:
+    radial-gradient(1200px 600px at 20% -10%, #13222f 0%, #0a0e14 55%),
+    var(--bg);
+  --topbar-bg: rgba(10, 14, 20, 0.88);
+  --panel-translucent: rgba(16, 24, 35, 0.55);
+  --panel-soft: rgba(16, 24, 35, 0.35);
+  --field-bg: rgba(9, 22, 30, 0.9);
+  --field-soft: rgba(14, 20, 29, 0.55);
+  --overlay-bg: rgba(4, 10, 15, 0.75);
+  --card-hover-bg: transparent;
+  --card-hover-border: var(--green);
+  --card-hover-shadow: 0 0 18px rgba(var(--green-rgb), 0.16);
+  --card-hover-transform: translateY(-3px);
+  --heat-0: rgba(196, 92, 34, 0.14);
+  --heat-1: #b85a24;
+  --heat-2: #d04d28;
+  --heat-3: #b5242d;
+  --heat-4: #761024;
   --mono: 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;
   --sans: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #edf3f4;
+  --bg2: #f6f9fa;
+  --panel: #ffffff;
+  --panel2: #e9f0f2;
+  --line: #d6e1e5;
+  --line2: #bccbd1;
+  --green: #007d50;
+  --green-rgb: 0, 125, 80;
+  --cyan: #00718c;
+  --cyan-rgb: 0, 113, 140;
+  --red: #c7352e;
+  --red-rgb: 199, 53, 46;
+  --amber: #a35f00;
+  --amber-rgb: 163, 95, 0;
+  --text: #26353e;
+  --text-strong: #14232c;
+  --muted: #5d707a;
+  --dim: #84949c;
+  --on-accent: #ffffff;
+  --on-amber: #ffffff;
+  --body-bg:
+    radial-gradient(1000px 520px at 12% -12%, rgba(0, 125, 80, 0.09), transparent 62%),
+    linear-gradient(180deg, #f7fafb 0%, #edf3f4 66%, #e8eff1 100%);
+  --topbar-bg: rgba(248, 251, 252, 0.9);
+  --panel-translucent: rgba(255, 255, 255, 0.82);
+  --panel-soft: rgba(247, 250, 251, 0.78);
+  --field-bg: rgba(255, 255, 255, 0.96);
+  --field-soft: rgba(247, 250, 251, 0.92);
+  --overlay-bg: rgba(28, 43, 50, 0.34);
+  --card-hover-bg: #ffffff;
+  --card-hover-border: rgba(var(--green-rgb), 0.5);
+  --card-hover-shadow: 0 12px 30px rgba(25, 58, 47, 0.13);
+  --card-hover-transform: translateY(-2px);
+  --heat-0: #e4eaed;
+  --heat-1: #a8cce1;
+  --heat-2: #6da7c9;
+  --heat-3: #326f9e;
+  --heat-4: #0f436a;
 }
 
 * {
@@ -23,14 +91,25 @@
   padding: 0;
 }
 
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 0.38s ease,
+    border-color 0.38s ease,
+    color 0.38s ease,
+    fill 0.38s ease,
+    stroke 0.38s ease,
+    box-shadow 0.38s ease !important;
+}
+
 html {
   overflow-y: scroll;
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 20% -10%, #13222f 0%, #0a0e14 55%),
-    var(--bg);
+  background: var(--body-bg);
   color: var(--text);
   font-family: var(--sans);
   line-height: 1.7;
@@ -47,7 +126,7 @@ a {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(10, 14, 20, 0.88);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -130,12 +209,12 @@ a {
 .btn.primary {
   background: var(--green);
   border-color: var(--green);
-  color: #06261a;
+  color: var(--on-accent);
   font-weight: 700;
 }
 .btn.primary:hover {
   filter: brightness(1.1);
-  color: #06261a;
+  color: var(--on-accent);
 }
 .btn.alert {
   background: transparent;
@@ -182,7 +261,7 @@ a {
 .page-title {
   font-size: 24px;
   font-weight: 800;
-  color: #eaf4ff;
+  color: var(--text-strong);
   margin-bottom: 6px;
 }
 .page-sub {
@@ -207,7 +286,7 @@ a {
 }
 .card .t {
   font-weight: 700;
-  color: #eaf4ff;
+  color: var(--text-strong);
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -222,7 +301,7 @@ a {
   font-size: 34px;
   font-weight: 700;
   color: var(--green);
-  text-shadow: 0 0 12px rgba(0, 255, 159, 0.35);
+  text-shadow: 0 0 12px rgba(var(--green-rgb), 0.35);
 }
 
 /* 表单 */
@@ -230,86 +309,9 @@ a {
   max-width: 400px;
   margin: 40px auto;
 }
-.auth-page {
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-}
-
-/* 背景装饰层 */
-.auth-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-.bg-code {
-  position: absolute;
-  left: 15%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 30%;
-  opacity: 0.6;
-  filter: blur(2px);
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 2;
-  color: var(--green);
-  text-shadow: 0 0 8px rgba(0, 255, 159, 0.4);
-  white-space: pre;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 25%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 25%, #000 100%);
-}
-.bg-code .c { color: var(--dim); }
-.bg-code .y { color: var(--amber); }
-.bg-network {
-  position: absolute;
-  right: -40px;
-  bottom: -20px;
-  width: 55%;
-  height: 80%;
-  opacity: 0.55;
-}
-
-/* 品牌区 */
-.auth-shell {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-.auth-brand {
-  text-align: center;
-  margin-bottom: 26px;
-}
-.auth-brand .shield {
-  width: 66px;
-  height: 66px;
-  margin: 0 auto 12px;
-}
-.auth-brand .brand-name {
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 26px;
-  letter-spacing: 3px;
-  color: var(--green);
-  text-shadow: 0 0 14px rgba(0, 255, 159, 0.4);
-}
-.auth-brand .brand-sub {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--muted);
-  margin-top: 4px;
-}
+/* 登录 / 注册页样式已迁移到 AuthView.vue 的 scoped 样式中 */
 .form-card h2 {
-  color: #eaf4ff;
+  color: var(--text-strong);
   margin-bottom: 18px;
 }
 .field {

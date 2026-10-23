@@ -8,15 +8,6 @@
     <div class="head">
       <h1 class="page-title">排行榜</h1>
       <div class="toolbar">
-        <div class="filters">
-          <button
-            v-for="f in filters"
-            :key="f"
-            class="tab"
-            :class="{ active: filter === f }"
-            @click="filter = f"
-          >{{ f }}</button>
-        </div>
         <div class="search">
           <span class="s-ico">⌕</span>
           <input v-model="keyword" placeholder="搜索选手…" />
@@ -67,23 +58,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { challengesApi, type LeaderboardEntry } from '../api/challenges'
+import { parseServerDate } from '../utils/datetime'
 
 const rows = ref<LeaderboardEntry[]>([])
 const loading = ref(true)
-const filters = ['全部', '本月', '我的好友']
-const filter = ref('全部')
 const keyword = ref('')
 
 const shown = computed(() => {
   let list = rows.value
-  if (filter.value === '本月') {
-    const now = new Date()
-    list = list.filter((r) => {
-      if (!r.last_solved_at) return false
-      const d = new Date(r.last_solved_at)
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    })
-  }
   if (keyword.value.trim()) {
     const k = keyword.value.trim().toLowerCase()
     list = list.filter((r) => r.username.toLowerCase().includes(k))
@@ -93,7 +75,7 @@ const shown = computed(() => {
 
 function fmt(iso: string | null): string {
   if (!iso) return '--'
-  const d = new Date(iso)
+  const d = parseServerDate(iso)
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
@@ -114,7 +96,7 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--muted);
   padding: 8px 14px;
-  background: rgba(16, 24, 35, 0.5);
+  background: var(--panel-translucent);
   border: 1px solid var(--line);
   border-radius: 6px;
 }
@@ -127,19 +109,8 @@ onMounted(async () => {
   gap: 16px;
   flex-wrap: wrap;
 }
-.page-title { font-size: 26px; font-weight: 800; color: #eaf4ff; }
+.page-title { font-size: 26px; font-weight: 800; color: var(--text-strong); }
 .toolbar { display: flex; align-items: center; gap: 12px; }
-.filters { display: flex; gap: 6px; }
-.tab {
-  font-size: 13px;
-  padding: 5px 14px;
-  border: 1px solid var(--line2);
-  background: var(--panel);
-  color: var(--muted);
-  border-radius: 20px;
-  cursor: pointer;
-}
-.tab.active { color: #06261a; background: var(--green); border-color: var(--green); font-weight: 700; }
 .search {
   display: flex;
   align-items: center;
@@ -175,7 +146,7 @@ onMounted(async () => {
   color: var(--text);
 }
 .tbl tr:last-child td { border-bottom: none; }
-.tbl tr:hover td { background: rgba(0, 255, 159, 0.03); }
+.tbl tr:hover td { background: rgba(var(--green-rgb), 0.03); }
 .rank { width: 60px; font-family: var(--mono); }
 .medal { font-size: 20px; }
 .no { color: var(--muted); font-weight: 700; }
@@ -188,7 +159,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #06261a;
+  color: var(--on-accent);
   background: var(--cyan);
   font-size: 13px;
 }
@@ -198,7 +169,7 @@ onMounted(async () => {
 .chip {
   font-size: 12px;
   color: var(--cyan);
-  border: 1px solid rgba(0, 224, 255, 0.35);
+  border: 1px solid rgba(var(--cyan-rgb), 0.35);
   padding: 2px 10px;
   border-radius: 20px;
 }

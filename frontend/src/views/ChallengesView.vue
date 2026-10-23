@@ -11,9 +11,14 @@
     <!-- 标题 + 搜索 -->
     <div class="head">
       <h1 class="page-title">题目大厅</h1>
-      <div class="search">
-        <span class="s-ico">⌕</span>
-        <input v-model="search" placeholder="搜索题目…" @input="onSearch" />
+      <div class="head-actions">
+        <button v-if="canSubmitChallenge" class="submit-trigger" @click="showSubmit = true">
+          <span class="plus">+</span> 提交题目
+        </button>
+        <div class="search">
+          <span class="s-ico">⌕</span>
+          <input v-model="search" placeholder="搜索题目…" @input="onSearch" />
+        </div>
       </div>
     </div>
 
@@ -137,6 +142,8 @@
       <span class="pg-info">第 {{ page }} / {{ totalPages }} 页 · 共 {{ total }} 题</span>
       <button class="pg" :disabled="page === totalPages" @click="page++">下一页 →</button>
     </div>
+
+    <SubmitChallengeModal v-if="showSubmit" @close="showSubmit = false" />
   </div>
 </template>
 
@@ -145,14 +152,21 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { CATEGORIES, challengesApi, type ChallengeCard } from '../api/challenges'
 import { competitionsApi, type Competition, type CompetitionEdition, type CompetitionChallenge } from '../api/competitions'
+import SubmitChallengeModal from '../components/SubmitChallengeModal.vue'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 const list = ref<ChallengeCard[]>([])
 const total = ref(0)
 const queryCat = typeof route.query.category === 'string' ? route.query.category : ''
 const active = ref(CATEGORIES.includes(queryCat) ? queryCat : '全部')
 const search = ref('')
 const loading = ref(true)
+const showSubmit = ref(false)
+const canSubmitChallenge = computed(
+  () => auth.isAuthenticated && auth.user?.role !== 'admin',
+)
 
 // 比赛真题视图
 const viewMode = ref<'lobby' | 'competitions'>('lobby')
@@ -249,7 +263,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: rgba(16, 24, 35, 0.5);
+  background: var(--panel-translucent);
   border: 1px solid var(--line);
   border-radius: 6px;
 }
@@ -263,10 +277,39 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 16px;
 }
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.submit-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid rgba(var(--green-rgb), 0.45);
+  border-radius: 6px;
+  background: rgba(var(--green-rgb), 0.06);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.submit-trigger:hover {
+  border-color: var(--green);
+  background: rgba(var(--green-rgb), 0.12);
+  box-shadow: 0 0 12px rgba(var(--green-rgb), 0.12);
+}
+.submit-trigger .plus {
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1;
+}
 .page-title {
   font-size: 26px;
   font-weight: 800;
-  color: #eaf4ff;
+  color: var(--text-strong);
 }
 .search {
   display: flex;
@@ -304,7 +347,7 @@ onMounted(async () => {
 }
 .tab:hover { color: var(--text); border-color: var(--green); }
 .tab.active {
-  color: #06261a;
+  color: var(--on-accent);
   background: var(--green);
   border-color: var(--green);
   font-weight: 700;
@@ -328,14 +371,15 @@ onMounted(async () => {
   transition: 0.18s;
 }
 .card:hover {
-  border-color: var(--green);
-  box-shadow: 0 0 18px rgba(0, 255, 159, 0.16);
-  transform: translateY(-3px);
+  border-color: var(--card-hover-border);
+  background: var(--card-hover-bg);
+  box-shadow: var(--card-hover-shadow);
+  transform: var(--card-hover-transform);
 }
 .card.solved {
-  border-color: rgba(0, 255, 159, 0.55);
-  background: linear-gradient(180deg, rgba(0, 255, 159, 0.07), var(--panel));
-  box-shadow: 0 0 14px rgba(0, 255, 159, 0.12);
+  border-color: rgba(var(--green-rgb), 0.55);
+  background: linear-gradient(180deg, rgba(var(--green-rgb), 0.07), var(--panel));
+  box-shadow: 0 0 14px rgba(var(--green-rgb), 0.12);
 }
 .c-title-row {
   display: flex;
@@ -347,11 +391,11 @@ onMounted(async () => {
   flex-shrink: 0;
   font-size: 11px;
   font-weight: 800;
-  color: #06261a;
+  color: var(--on-accent);
   background: var(--green);
   border-radius: 4px;
   padding: 2px 7px;
-  box-shadow: 0 0 10px rgba(0, 255, 159, 0.8);
+  box-shadow: 0 0 10px rgba(var(--green-rgb), 0.8);
   letter-spacing: 0.5px;
 }
 .c-state {
@@ -370,20 +414,20 @@ onMounted(async () => {
 .c-state.done {
   border-color: var(--green);
   background: var(--green);
-  color: #06261a;
-  box-shadow: 0 0 10px rgba(0, 255, 159, 0.8), 0 0 4px rgba(0, 255, 159, 0.6);
+  color: var(--on-accent);
+  box-shadow: 0 0 10px rgba(var(--green-rgb), 0.8), 0 0 4px rgba(var(--green-rgb), 0.6);
 }
 .c-pts {
   font-family: var(--mono);
   font-size: 20px;
   font-weight: 700;
   color: var(--green);
-  text-shadow: 0 0 10px rgba(0, 255, 159, 0.35);
+  text-shadow: 0 0 10px rgba(var(--green-rgb), 0.35);
 }
 .c-title {
   font-size: 17px;
   font-weight: 700;
-  color: #eaf4ff;
+  color: var(--text-strong);
   line-height: 1.3;
   overflow: hidden;
   display: -webkit-box;
@@ -394,12 +438,12 @@ onMounted(async () => {
   align-self: flex-start;
   font-size: 12px;
   color: var(--cyan);
-  border: 1px solid rgba(0, 224, 255, 0.4);
+  border: 1px solid rgba(var(--cyan-rgb), 0.4);
   padding: 1px 8px;
   border-radius: 4px;
 }
 .c-stars { color: var(--dim); font-size: 12px; letter-spacing: 1px; }
-.c-stars .st.on { color: var(--amber); text-shadow: 0 0 6px rgba(245, 166, 35, 0.5); }
+.c-stars .st.on { color: var(--amber); text-shadow: 0 0 6px rgba(var(--amber-rgb), 0.5); }
 .c-foot {
   display: flex;
   justify-content: space-between;
@@ -444,29 +488,29 @@ onMounted(async () => {
 
 /* 比赛真题视图 */
 .comp-tab { border-color: rgba(255, 193, 7, 0.4); color: var(--amber); }
-.comp-tab.active { background: rgba(255, 193, 7, 0.15); border-color: var(--amber); color: #ffd54f; }
+.comp-tab.active { background: rgba(255, 193, 7, 0.15); border-color: var(--amber); color: var(--amber); }
 .comp-card { cursor: pointer; padding: 16px 16px 14px; min-height: 120px; }
 .comp-card:hover { border-color: var(--amber); box-shadow: 0 0 16px rgba(255, 193, 7, 0.1); }
 /* 比赛题目解出后用琥珀色标记（与比赛板块的黄色边框一致，而不是题库的绿色） */
 .comp-card.comp-solved {
-  border-color: rgba(245, 166, 35, 0.65);
-  background: linear-gradient(180deg, rgba(245, 166, 35, 0.09), var(--panel));
-  box-shadow: 0 0 14px rgba(245, 166, 35, 0.14);
+  border-color: rgba(var(--amber-rgb), 0.65);
+  background: linear-gradient(180deg, rgba(var(--amber-rgb), 0.09), var(--panel));
+  box-shadow: 0 0 14px rgba(var(--amber-rgb), 0.14);
 }
 .comp-card.comp-solved:hover {
   border-color: var(--amber);
-  box-shadow: 0 0 18px rgba(245, 166, 35, 0.22);
+  box-shadow: 0 0 18px rgba(var(--amber-rgb), 0.22);
 }
 .comp-card .c-state.done {
   border-color: var(--amber);
   background: var(--amber);
-  color: #2a1a02;
-  box-shadow: 0 0 10px rgba(245, 166, 35, 0.8), 0 0 4px rgba(245, 166, 35, 0.6);
+  color: var(--on-amber);
+  box-shadow: 0 0 10px rgba(var(--amber-rgb), 0.8), 0 0 4px rgba(var(--amber-rgb), 0.6);
 }
 .comp-card .solved-badge {
-  color: #2a1a02;
+  color: var(--on-amber);
   background: var(--amber);
-  box-shadow: 0 0 10px rgba(245, 166, 35, 0.8);
+  box-shadow: 0 0 10px rgba(var(--amber-rgb), 0.8);
 }
 .comp-card:hover .go { color: var(--amber); }
 /* 届次卡片：该届已得分数 */
@@ -500,10 +544,10 @@ onMounted(async () => {
 @keyframes scorePulse {
   0%,
   100% {
-    text-shadow: 0 0 8px rgba(245, 166, 35, 0.35), 0 0 18px rgba(245, 166, 35, 0.15);
+    text-shadow: 0 0 8px rgba(var(--amber-rgb), 0.35), 0 0 18px rgba(var(--amber-rgb), 0.15);
   }
   50% {
-    text-shadow: 0 0 16px rgba(245, 166, 35, 0.8), 0 0 34px rgba(245, 166, 35, 0.4);
+    text-shadow: 0 0 16px rgba(var(--amber-rgb), 0.8), 0 0 34px rgba(var(--amber-rgb), 0.4);
   }
 }
 .c-icon { font-size: 28px; }
@@ -537,7 +581,17 @@ onMounted(async () => {
 .back:hover { color: var(--green); }
 .edition-title {
   font-size: 22px;
-  color: #eaf4ff;
+  color: var(--text-strong);
   margin: 0;
+}
+@media (max-width: 820px) {
+  .head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .head-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 </style>

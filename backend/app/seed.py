@@ -119,6 +119,9 @@ def _ensure_columns() -> None:
             "points": "INTEGER NOT NULL DEFAULT 100",
             "solved_count": "INTEGER NOT NULL DEFAULT 0",
         },
+        "notifications": {
+            "related_article_id": "INTEGER",
+        },
     }
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())

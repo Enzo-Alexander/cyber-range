@@ -17,6 +17,7 @@ const router = createRouter({
         { path: 'traffic', name: 'traffic', component: () => import('../views/TrafficView.vue') },
         { path: 'leaderboard', name: 'leaderboard', component: () => import('../views/LeaderboardView.vue') },
         { path: 'announcements', name: 'announcements', component: () => import('../views/AnnouncementView.vue') },
+        { path: 'knowledge', name: 'knowledge', component: () => import('../views/KnowledgeView.vue') },
         { path: 'profile', name: 'profile', component: () => import('../views/ProfileView.vue'), meta: { requiresAuth: true } },
         { path: 'admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true } },
       ],

@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CyberRange · 网络安全实战靶场</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('cr_theme')
+          const preference = ['light', 'dark', 'system'].includes(saved) ? saved : 'system'
+          const dark = preference === 'dark'
+            || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          document.documentElement.dataset.themePreference = preference
+        } catch {
+          document.documentElement.dataset.theme = 'light'
+          document.documentElement.dataset.themePreference = 'system'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

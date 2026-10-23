@@ -45,7 +45,7 @@ class Challenge(Base):
     attachment: Mapped[str | None] = mapped_column(String(255), nullable=True)
     flag: Mapped[str] = mapped_column(String(255), nullable=False)
     author: Mapped[str] = mapped_column(String(50), default="admin", nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="published", nullable=False)  # published/pending/draft
+    status: Mapped[str] = mapped_column(String(20), default="published", nullable=False)  # published/pending/draft/rejected
     solved_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -69,6 +69,22 @@ class SolveRecord(Base):
     challenge: Mapped["Challenge"] = relationship(back_populates="solves")
 
 
+class Favorite(Base):
+    """用户收藏的题库题目。"""
+
+    __tablename__ = "favorites"
+    __table_args__ = (
+        UniqueConstraint("user_id", "challenge_id", name="uq_favorite_user_challenge"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    challenge_id: Mapped[int] = mapped_column(
+        ForeignKey("challenges.id"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Article(Base):
     """公告 / 文章。"""
 
@@ -79,6 +95,22 @@ class Article(Base):
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     type: Mapped[str] = mapped_column(String(20), default="article", index=True, nullable=False)  # article / announcement
     author: Mapped[str] = mapped_column(String(50), default="admin", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Notification(Base):
+    """站内通知：题目提交、审核结果等。"""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    type: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    related_challenge_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    related_article_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
