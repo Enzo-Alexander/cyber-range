@@ -181,7 +181,7 @@ a {
 .nav a:hover {
   color: var(--text);
 }
-.nav a.router-link-active {
+.nav a[aria-current='page'] {
   color: var(--green);
   border-bottom-color: var(--green);
 }

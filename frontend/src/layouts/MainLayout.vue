@@ -2,10 +2,11 @@
   <div class="app">
     <header class="topbar">
       <div class="in">
-        <router-link to="/" class="brand">
+        <router-link to="/cyberrange" class="brand">
           <span class="sh"></span>CYBERRANGE
         </router-link>
         <nav class="nav">
+          <router-link to="/overview">总览</router-link>
           <router-link to="/challenges">题库</router-link>
           <router-link to="/traffic">流量分析</router-link>
           <router-link to="/leaderboard">排行榜</router-link>
