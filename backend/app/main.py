@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routers import articles, auth, challenges, competitions, notifications, parse_doc, traffic, users
+from .routers import articles, auth, books, challenges, competitions, notifications, parse_doc, traffic, users
 from .seed import init_db
 
 app = FastAPI(title=settings.app_name)
@@ -23,6 +23,7 @@ app.add_middleware(
 _uploads_root = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(_uploads_root, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=_uploads_root), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory=_uploads_root), name="api-uploads")
 
 
 @app.on_event("startup")
@@ -36,6 +37,8 @@ app.include_router(challenges.router, prefix=settings.api_prefix)
 app.include_router(challenges.admin_router, prefix=settings.api_prefix)
 app.include_router(articles.router, prefix=settings.api_prefix)
 app.include_router(articles.admin_router, prefix=settings.api_prefix)
+app.include_router(books.router, prefix=settings.api_prefix)
+app.include_router(books.admin_router, prefix=settings.api_prefix)
 app.include_router(notifications.router, prefix=settings.api_prefix)
 app.include_router(parse_doc.router, prefix=settings.api_prefix)
 app.include_router(traffic.router, prefix=settings.api_prefix)

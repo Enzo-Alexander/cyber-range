@@ -6,6 +6,7 @@ venv/
 *.db
 *.db-journal
 .env
+backend/uploads/books/
 
 # Node
 node_modules/

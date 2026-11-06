@@ -218,6 +218,52 @@ class ArticleOut(BaseModel):
     created_at: datetime
 
 
+# ---------- 图书馆书籍 ----------
+class BookIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class BookUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class BookPageIn(BaseModel):
+    content: str = ""
+    image: str | None = None
+    after_page_id: int | None = None
+
+
+class BookPageUpdate(BaseModel):
+    content: str = ""
+    image: str | None = None
+
+
+class BookPageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    position: int
+    content: str
+    image: str | None
+    created_at: datetime
+
+
+class BookOut(BaseModel):
+    id: int
+    title: str
+    author: str
+    page_count: int
+    created_at: datetime
+
+
+class BookDetailOut(BaseModel):
+    id: int
+    title: str
+    author: str
+    created_at: datetime
+    pages: list[BookPageOut]
+
+
 # ---------- 通知 ----------
 class NotificationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

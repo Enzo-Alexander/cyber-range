@@ -98,6 +98,38 @@ class Article(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class Book(Base):
+    """图书馆中的书籍。"""
+
+    __tablename__ = "books"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(200), index=True, nullable=False)
+    author: Mapped[str] = mapped_column(String(50), default="admin", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    pages: Mapped[list["BookPage"]] = relationship(
+        back_populates="book",
+        cascade="all, delete-orphan",
+        order_by="BookPage.position",
+    )
+
+
+class BookPage(Base):
+    """书籍页面，支持正文和单张图片。"""
+
+    __tablename__ = "book_pages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id"), index=True, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    book: Mapped["Book"] = relationship(back_populates="pages")
+
+
 class Notification(Base):
     """站内通知：题目提交、审核结果等。"""
 

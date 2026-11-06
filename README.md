@@ -122,6 +122,10 @@ pnpm run dev   # 开发模式
 
 **关于前端直连地址**：`.env.development` 中的 `http://127.0.0.1:8000/api` 指向「运行者自己电脑上的 8000 端口」，对方本地跑后端时正好对上，一般无需修改。
 
+## 部署到云服务器
+
+单机 Docker 部署步骤见 [DEPLOY.md](./DEPLOY.md)。生产环境使用 `docker-compose.prod.yml`，由 Nginx 提供前端页面并反向代理 `/api`。
+
 ---
 
 ## 常见问题

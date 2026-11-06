@@ -159,6 +159,11 @@
           </table>
         </section>
 
+        <!-- 书籍管理 -->
+        <section v-else-if="section === 'books'" class="panel">
+          <BookAdmin />
+        </section>
+
         <!-- 文章管理 -->
         <section v-else-if="section === 'articles'" class="panel">
           <div class="panel-head">
@@ -513,6 +518,7 @@ import {
   type Challenge,
 } from '../api/challenges'
 import { articlesApi, type Article } from '../api/articles'
+import BookAdmin from '../components/BookAdmin.vue'
 import { competitionsApi, type Competition, type CompetitionEdition, type CompetitionChallenge } from '../api/competitions'
 import { useAuthStore } from '../stores/auth'
 import { parseServerDate } from '../utils/datetime'
@@ -523,6 +529,7 @@ const section = ref('challenges')
 const menus = [
   { id: 'challenges', label: '题目管理' },
   { id: 'competitions', label: '比赛管理' },
+  { id: 'books', label: '书籍管理' },
   { id: 'review', label: '题目审核' },
   { id: 'users', label: '用户管理' },
   { id: 'notice', label: '公告管理' },

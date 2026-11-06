@@ -1,5 +1,9 @@
 <template>
-  <section class="cyberrange-stage" aria-label="CyberRange 动态球体">
+  <section
+    class="cyberrange-stage"
+    :class="{ 'signal-glitch': returnGlitchActive }"
+    aria-label="CyberRange 动态球体"
+  >
     <canvas ref="canvasRef" class="scene-canvas" aria-hidden="true"></canvas>
     <span
       v-if="canInteract"
@@ -18,7 +22,7 @@
       <span class="projection-cone-near"></span>
     </span>
     <button
-      v-if="canInteract && !isTransitioning && terminalPhase === 'closed'"
+      v-if="canInteract && !isExpanded && !isTransitioning && terminalPhase === 'closed'"
       class="sphere-hit"
       :class="{ expanded: isExpanded }"
       :style="hitAreaStyle"
@@ -46,7 +50,11 @@
       </div>
     </div>
     <div
-      v-if="terminalPhase !== 'closed' && terminalPhase !== 'collapsing'"
+      v-if="
+        terminalPhase !== 'closed'
+        && terminalPhase !== 'collapsing'
+        && terminalPhase !== 'restoring'
+      "
       class="terminal-build"
       :class="terminalPhase"
       :style="terminalStyle"
@@ -72,6 +80,12 @@
       </div>
     </div>
     <p v-if="sceneError" class="scene-error">{{ sceneError }}</p>
+    <Teleport to="body">
+      <LibraryJourney
+        v-if="showLibraryJourney"
+        @close="closeLibraryJourney"
+      />
+    </Teleport>
   </section>
 </template>
 
@@ -81,6 +95,7 @@ import * as THREE from 'three'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
+import LibraryJourney from '../components/LibraryJourney.vue'
 import { useThemeStore } from '../stores/theme'
 
 type ColorMaterial =
@@ -125,7 +140,14 @@ interface FatLineEntry {
   lightOpacity: number
 }
 
-type TerminalPhase = 'closed' | 'collapsing' | 'line' | 'opening' | 'open' | 'closing'
+type TerminalPhase =
+  | 'closed'
+  | 'collapsing'
+  | 'line'
+  | 'opening'
+  | 'open'
+  | 'closing'
+  | 'restoring'
 
 const theme = useThemeStore()
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -146,6 +168,8 @@ const projectionIndex = ref(0)
 const projectionClosing = ref(false)
 const projectionFlicker = ref(false)
 const terminalPhase = ref<TerminalPhase>('closed')
+const showLibraryJourney = ref(false)
+const returnGlitchActive = ref(false)
 
 const tintedMaterials: TintEntry[] = []
 const fatLineMaterials: FatLineEntry[] = []
@@ -174,6 +198,7 @@ let terminalProgress = 0
 let terminalStartProgress = 0
 let terminalTargetProgress = 0
 let terminalStartTime = 0
+let returnGlitchTimer = 0
 
 const settleTravelDuration = 1.6
 const interactionTravelDuration = 3.6
@@ -834,14 +859,18 @@ function terminalLayout(width: number, height: number) {
   const stacked = base.stacked
   const sphereX = stacked ? width * 0.32 : width * 0.25
   const sphereY = stacked ? height * 0.4 : height * 0.5
-  const left = stacked ? 24 : width * 0.48
-  const right = stacked ? width - 24 : width * 0.94
+  const availableLeft = stacked ? 24 : width * 0.48
+  const availableRight = stacked ? width - 24 : width * 0.94
   const top = stacked ? height * 0.56 : height * 0.22
   const bottom = stacked ? height * 0.9 : height * 0.78
   const targetScale = Math.max(
     0.28,
     base.expandedScale * (stacked ? 0.68 : 0.82),
   )
+  const lineCenterX = (availableLeft + availableRight) / 2
+  const lineWidth = (height / 8.06) * 7.6 * targetScale
+  const left = lineCenterX - lineWidth / 2
+  const right = lineCenterX + lineWidth / 2
 
   return {
     sphereX,
@@ -853,9 +882,9 @@ function terminalLayout(width: number, height: number) {
     width: right - left,
     height: bottom - top,
     targetScale,
-    lineCenterX: (left + right) / 2,
+    lineCenterX,
     lineCenterY: (top + bottom) / 2,
-    lineWidth: base.ringDiameter * targetScale,
+    lineWidth,
   }
 }
 
@@ -1014,6 +1043,20 @@ function clearTerminalTimers() {
   terminalTimers = []
 }
 
+function startLibraryJourney() {
+  if (!isExpanded.value || isTransitioning.value) return
+  showLibraryJourney.value = true
+}
+
+function closeLibraryJourney() {
+  showLibraryJourney.value = false
+  returnGlitchActive.value = true
+  clearTimeout(returnGlitchTimer)
+  returnGlitchTimer = window.setTimeout(() => {
+    returnGlitchActive.value = false
+  }, 1700)
+}
+
 function scheduleTerminal(callback: () => void, delay: number) {
   terminalTimers.push(setTimeout(callback, delay))
 }
@@ -1031,18 +1074,20 @@ function closeTerminal() {
   if (!['line', 'opening', 'open'].includes(terminalPhase.value)) return
   clearTerminalTimers()
   terminalPhase.value = 'closing'
-  terminalStartProgress = terminalProgress
-  terminalTargetProgress = 0
-  terminalStartTime = sceneTime
-  if (orbitGroup) orbitGroup.visible = true
+  scheduleTerminal(() => {
+    if (terminalPhase.value !== 'closing') return
+    terminalPhase.value = 'restoring'
+    terminalStartProgress = terminalProgress
+    terminalTargetProgress = 0
+    terminalStartTime = sceneTime
+    if (orbitGroup) orbitGroup.visible = true
+  }, 820)
 }
 
 function activateSphere() {
   if (!isExpanded.value) {
     expandSphere()
-    return
   }
-  startTerminalConstruction()
 }
 
 function expandSphere() {
@@ -1079,12 +1124,32 @@ function collapseSphere() {
 }
 
 function onDocumentPointerDown(event: PointerEvent) {
+  if (showLibraryJourney.value) return
   if (!isExpanded.value || isTransitioning.value) return
   const target = event.target as Element | null
   if (!target) return
   if (target.closest('.sphere-hit')) return
   if (target.closest('a, button, input, textarea, select, label, [role="button"], [contenteditable="true"]')) {
     return
+  }
+  if (terminalPhase.value === 'closed') {
+    const layout = responsiveLayout(window.innerWidth, window.innerHeight)
+    const ringRadius = (layout.ringDiameter * layout.expandedScale) / 2
+    const distance = Math.hypot(
+      event.clientX - window.innerWidth / 2,
+      event.clientY - window.innerHeight / 2,
+    )
+    const ringInnerRadius = ringRadius - 58
+    const ringOuterRadius = ringRadius + 34
+
+    if (distance >= ringInnerRadius && distance <= ringOuterRadius) {
+      startTerminalConstruction()
+      return
+    }
+    if (distance < ringInnerRadius) {
+      startLibraryJourney()
+      return
+    }
   }
   if (terminalPhase.value !== 'closed') {
     if (target.closest('.terminal-build')) return
@@ -1119,7 +1184,7 @@ function updateScene(time: number) {
       if (!isExpanded.value) playProjectionLine()
     }
   }
-  if (terminalPhase.value === 'collapsing' || terminalPhase.value === 'closing') {
+  if (terminalPhase.value === 'collapsing' || terminalPhase.value === 'restoring') {
     const terminalTransition = reducedMotion
       ? 1
       : clamp01((time - terminalStartTime) / 1.2)
@@ -1265,6 +1330,7 @@ function disposeScene() {
   clearProjectionTimers()
   clearInteractionTimers()
   clearTerminalTimers()
+  clearTimeout(returnGlitchTimer)
   window.removeEventListener('resize', resizeScene)
 
   if (scene) {
@@ -1326,6 +1392,86 @@ onBeforeUnmount(() => {
   height: 100%;
   opacity: 0;
   filter: drop-shadow(0 0 7px rgba(var(--cyan-rgb), 0.2));
+}
+
+.cyberrange-stage.signal-glitch .scene-canvas {
+  animation:
+    signal-jitter 1.45s steps(2, end) both,
+    signal-flicker 1.45s steps(1, end) both;
+  transform-origin: center;
+}
+
+.cyberrange-stage.signal-glitch::before,
+.cyberrange-stage.signal-glitch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cyberrange-stage.signal-glitch::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 34px,
+    rgba(var(--cyan-rgb), 0.18) 35px,
+    transparent 37px,
+    transparent 79px,
+    rgba(255, 255, 255, 0.09) 80px,
+    transparent 82px
+  );
+  mix-blend-mode: screen;
+  animation: signal-bands 1.45s steps(1, end) both;
+}
+
+.cyberrange-stage.signal-glitch::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--cyan-rgb), 0.12) 18%,
+    transparent 20%,
+    transparent 56%,
+    rgba(255, 255, 255, 0.1) 58%,
+    transparent 60%
+  );
+  opacity: 0;
+  animation: signal-tear 1.1s steps(1, end) both;
+}
+
+@keyframes signal-jitter {
+  0% { transform: translate(0, 0) skewX(0) scale(1); filter: brightness(1); }
+  7% { transform: translate(-12px, 3px) skewX(2.4deg) scale(1.008); filter: brightness(1.45) contrast(1.2); }
+  13% { transform: translate(9px, -4px) skewX(-1.7deg) scale(1.012); filter: brightness(0.72); }
+  21% { transform: translate(-6px, 2px) skewX(1deg) scale(1.004); filter: brightness(1.5); }
+  33% { transform: translate(13px, -2px) skewX(-2.2deg) scale(1.01); filter: brightness(0.84); }
+  48% { transform: translate(-4px, 1px) skewX(0.8deg) scale(1.004); filter: brightness(1.32); }
+  64% { transform: translate(5px, -1px) skewX(-0.7deg) scale(1.002); filter: brightness(0.94); }
+  82% { transform: translate(-2px, 0) skewX(0.3deg) scale(1.001); filter: brightness(1.1); }
+  100% { transform: translate(0, 0) skewX(0) scale(1); filter: brightness(1); }
+}
+
+@keyframes signal-flicker {
+  0%, 9%, 17%, 31%, 54%, 78%, 100% { opacity: 1; }
+  12%, 23%, 46%, 69%, 86% { opacity: 0.34; }
+}
+
+@keyframes signal-bands {
+  0% { transform: translateY(-26%); opacity: 0; }
+  10% { transform: translateY(8%); opacity: 1; }
+  28% { transform: translateY(-12%); opacity: 0.55; }
+  44% { transform: translateY(21%); opacity: 0.9; }
+  68% { transform: translateY(-5%); opacity: 0.32; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+@keyframes signal-tear {
+  0%, 100% { opacity: 0; transform: translateX(0); }
+  14% { opacity: 0.8; transform: translateX(-8%); }
+  26% { opacity: 0.2; transform: translateX(5%); }
+  42% { opacity: 0.65; transform: translateX(-3%); }
+  63% { opacity: 0.18; transform: translateX(2%); }
+  81% { opacity: 0.42; transform: translateX(0); }
 }
 
 .projection-cone {
@@ -1596,11 +1742,6 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   transform: none;
-}
-
-.terminal-build.closing .terminal-rail {
-  opacity: 0;
-  transition: opacity 0.12s ease;
 }
 
 .terminal-build.closing::before,
